@@ -150,6 +150,8 @@ const Index = () => {
               Click any node to explore the journey from farm to table.
             </p>
             <InteractiveChainVisualization />
+          </motion.div>
+        </div>
       </section>
 
       {/* Stats Section */}

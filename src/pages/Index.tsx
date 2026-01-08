@@ -2,9 +2,13 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/Logo";
 import { RoleCard } from "@/components/RoleCard";
-import { ChainVisualization } from "@/components/ChainVisualization";
+import { InteractiveChainVisualization } from "@/components/InteractiveChainVisualization";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
+import { ProcessorOnboarding } from "@/components/onboarding/ProcessorOnboarding";
+import { BuyerDiscovery } from "@/components/onboarding/BuyerDiscovery";
+import { FarmerRegistration } from "@/components/onboarding/FarmerRegistration";
+import { ExporterOnboarding } from "@/components/onboarding/ExporterOnboarding";
 import heroImage from "@/assets/hero-kenya-farm.jpg";
 
 type Role = "farmer" | "processor" | "exporter" | "buyer" | null;
@@ -143,11 +147,9 @@ const Index = () => {
             className="max-w-3xl mx-auto bg-card/60 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-soft"
           >
             <p className="text-center text-sm text-muted-foreground mb-4">
-              No matter your role, you're part of a chain that brings exceptional Kenyan quality to appreciative European customers.
+              Click any node to explore the journey from farm to table.
             </p>
-            <ChainVisualization />
-          </motion.div>
-        </div>
+            <InteractiveChainVisualization />
       </section>
 
       {/* Stats Section */}
@@ -319,14 +321,14 @@ const Index = () => {
         </div>
       </footer>
 
-      {/* Role Selection Modal */}
+      {/* Role-Specific Modal */}
       <AnimatePresence>
         {selectedRole && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-foreground/50 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-foreground/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
             onClick={() => setSelectedRole(null)}
           >
             <motion.div
@@ -334,27 +336,12 @@ const Index = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-card rounded-2xl p-8 max-w-md w-full shadow-medium border border-border"
+              className="bg-card rounded-2xl p-6 md:p-8 max-w-2xl w-full shadow-medium border border-border my-8"
             >
-              <div className="text-center">
-                <div className="text-5xl mb-4">
-                  {roles.find(r => r.id === selectedRole)?.icon}
-                </div>
-                <h3 className="font-display text-2xl font-bold text-foreground mb-2">
-                  {roles.find(r => r.id === selectedRole)?.title}
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  {roles.find(r => r.id === selectedRole)?.description}
-                </p>
-                <div className="space-y-3">
-                  <Button variant="hero" size="lg" className="w-full">
-                    Create {selectedRole === "buyer" ? "Buyer" : "Seller"} Account
-                  </Button>
-                  <Button variant="ghost" size="lg" className="w-full" onClick={() => setSelectedRole(null)}>
-                    Back to Selection
-                  </Button>
-                </div>
-              </div>
+              {selectedRole === "processor" && <ProcessorOnboarding onClose={() => setSelectedRole(null)} />}
+              {selectedRole === "buyer" && <BuyerDiscovery onClose={() => setSelectedRole(null)} />}
+              {selectedRole === "farmer" && <FarmerRegistration onClose={() => setSelectedRole(null)} />}
+              {selectedRole === "exporter" && <ExporterOnboarding onClose={() => setSelectedRole(null)} />}
             </motion.div>
           </motion.div>
         )}

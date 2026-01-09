@@ -3,23 +3,30 @@ import { motion } from "framer-motion";
 interface StatCardProps {
   value: string;
   label: string;
-  icon: string;
+  sublabel?: string;
   delay?: number;
 }
 
-export function StatCard({ value, label, icon, delay = 0 }: StatCardProps) {
+export function StatCard({ value, label, sublabel, delay = 0 }: StatCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay }}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.4 }}
       className="text-center p-4"
     >
-      <div className="text-3xl mb-2">{icon}</div>
-      <div className="font-display text-2xl md:text-3xl font-bold text-foreground mb-1">
+      <p className="font-display text-3xl font-bold text-foreground mb-1">
         {value}
-      </div>
-      <div className="text-sm text-muted-foreground">{label}</div>
+      </p>
+      <p className="text-sm font-medium text-muted-foreground">
+        {label}
+      </p>
+      {sublabel && (
+        <p className="text-xs text-muted-foreground/70 mt-0.5">
+          {sublabel}
+        </p>
+      )}
     </motion.div>
   );
 }

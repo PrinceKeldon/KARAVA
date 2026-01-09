@@ -7,18 +7,22 @@ interface LogoProps {
 
 export function Logo({ className, size = "md" }: LogoProps) {
   const sizes = {
-    sm: "text-xl",
-    md: "text-2xl",
-    lg: "text-4xl",
+    sm: "text-lg",
+    md: "text-xl",
+    lg: "text-2xl",
   };
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <span className={cn("font-display font-bold tracking-tight", sizes[size])}>
-        <span className="text-primary">Nut</span>
-        <span className="text-secondary">flix</span>
+      <div className="flex items-center">
+        <span className={cn("font-display font-bold tracking-tight text-foreground", sizes[size])}>
+          KARAVA
+        </span>
+      </div>
+      <div className="h-4 w-px bg-border" />
+      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Kenya → Germany
       </span>
-      <span className="text-lg">🥜</span>
     </div>
   );
 }

@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Playfair Display', 'Georgia', 'serif'],
-        body: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Space Grotesk', 'system-ui', 'sans-serif'],
+        body: ['DM Sans', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -61,24 +61,23 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // Extended Nutflix palette
-        cream: {
-          DEFAULT: "hsl(var(--cream))",
-          dark: "hsl(var(--cream-dark))",
+        // KARAVA extended palette
+        navy: {
+          DEFAULT: "hsl(var(--navy))",
+          light: "hsl(var(--navy-light))",
+          dark: "hsl(var(--navy-dark))",
         },
-        forest: {
-          DEFAULT: "hsl(var(--forest))",
-          light: "hsl(var(--forest-light))",
-          dark: "hsl(var(--forest-dark))",
+        steel: {
+          DEFAULT: "hsl(var(--steel))",
+          light: "hsl(var(--steel-light))",
+          dark: "hsl(var(--steel-dark))",
         },
-        amber: {
-          DEFAULT: "hsl(var(--amber))",
-          light: "hsl(var(--amber-light))",
-          dark: "hsl(var(--amber-dark))",
+        teal: {
+          DEFAULT: "hsl(var(--teal))",
+          light: "hsl(var(--teal-light))",
         },
-        gold: "hsl(var(--gold))",
-        terracotta: "hsl(var(--terracotta))",
-        sage: "hsl(var(--sage))",
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -7,67 +7,70 @@ import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { ProcessorOnboarding } from "@/components/onboarding/ProcessorOnboarding";
 import { BuyerDiscovery } from "@/components/onboarding/BuyerDiscovery";
-import { FarmerRegistration } from "@/components/onboarding/FarmerRegistration";
-import { ExporterOnboarding } from "@/components/onboarding/ExporterOnboarding";
-import heroImage from "@/assets/hero-kenya-farm.jpg";
+import { ArrowRight, X } from "lucide-react";
 
-type Role = "farmer" | "processor" | "exporter" | "buyer" | null;
+type Role = "supplier" | "buyer" | null;
 
 const Index = () => {
   const [selectedRole, setSelectedRole] = useState<Role>(null);
 
   const roles = [
     {
-      id: "farmer" as const,
-      icon: "👨‍🌾",
-      title: "I Grow / Farm",
-      subtitle: "Smallholder & Commercial Farmers",
-      description: "Register your farm, get EUDR compliant, and connect with processors who pay premium prices for traceable harvest.",
-    },
-    {
-      id: "processor" as const,
+      id: "supplier" as const,
       icon: "🏭",
-      title: "I Process / Aggregate",
-      subtitle: "Shellers, Millers & Aggregators",
-      description: "Manage compliance across 100s of farms. Batch registration, risk assessment, and transparent sourcing stories for buyers.",
-    },
-    {
-      id: "exporter" as const,
-      icon: "🚢",
-      title: "I Export",
-      subtitle: "Export Companies & Traders",
-      description: "One-click EUDR documentation. Prove deforestation-free sourcing and connect with verified European importers.",
+      title: "Kenyan Supplier",
+      subtitle: "Growers, Processors & Exporters",
+      description: "Evaluate your market readiness for German buyers. Identify gaps and receive actionable qualification guidance.",
     },
     {
       id: "buyer" as const,
-      icon: "🛒",
-      title: "I Import / Buy",
-      subtitle: "European Importers & Retailers",
-      description: "Source verified Kenyan macadamia and sesame with full traceability. Meet the farmers behind your ingredients.",
+      icon: "🏢",
+      title: "German Buyer",
+      subtitle: "Importers & Processors",
+      description: "Define your requirements clearly. Assess supplier fit before outreach. Reduce failed introductions.",
     },
   ];
 
   const stats = [
-    { value: "200+", label: "Connected Farms", icon: "🌿" },
-    { value: "€2.4M", label: "Trade Facilitated", icon: "💰" },
-    { value: "100%", label: "EUDR Compliant", icon: "✅" },
-    { value: "15%", label: "Price Premium", icon: "📈" },
+    { value: "78%", label: "Average assessment accuracy", sublabel: "for market readiness" },
+    { value: "3.2x", label: "Reduction in failed introductions", sublabel: "compared to cold outreach" },
+    { value: "14 days", label: "Average qualification time", sublabel: "from intake to assessment" },
+  ];
+
+  const howItWorks = [
+    {
+      step: "01",
+      title: "Submit Profile",
+      description: "Suppliers provide structured information. Buyers define requirements.",
+    },
+    {
+      step: "02",
+      title: "Assess Fit",
+      description: "Our system evaluates alignment, identifies gaps, and generates readiness scores.",
+    },
+    {
+      step: "03",
+      title: "Address Gaps",
+      description: "Clear guidance on what needs improvement before market access.",
+    },
+    {
+      step: "04",
+      title: "Request Introduction",
+      description: "When alignment exists, facilitate informed introductions between qualified parties.",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <Logo />
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="hidden md:inline-flex">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="hidden md:inline-flex text-muted-foreground">
               How It Works
             </Button>
-            <Button variant="ghost" size="sm" className="hidden md:inline-flex">
-              Success Stories
-            </Button>
-            <Button variant="heroOutline" size="sm">
+            <Button variant="outline" size="sm">
               Sign In
             </Button>
           </div>
@@ -75,47 +78,35 @@ const Index = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center pt-16">
-        {/* Background image with overlay */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src={heroImage}
-            alt="Kenyan macadamia farm at sunrise"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/80 to-background" />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto text-center mb-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
+      <section className="pt-28 pb-16 md:pt-32 md:pb-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.4 }}
+              className="text-sm font-medium text-muted-foreground mb-4 tracking-wide uppercase"
             >
-              <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                🌍 EUDR Compliance Made Simple
-              </span>
-            </motion.div>
+              Discovery & Qualification Platform
+            </motion.p>
 
             <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight"
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-5 leading-tight"
             >
-              Connecting Kenya's Harvest{" "}
-              <span className="text-gradient-warm">with Europe's Tables</span>
+              Assess market fit between Kenyan suppliers and German buyers
             </motion.h1>
 
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8"
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto"
             >
-              Every great ingredient has a story—and many hands that help it travel.
-              Where do you join the journey?
+              KARAVA helps agricultural suppliers and importers evaluate alignment before trade happens. 
+              Reduce wasted outreach. Identify gaps early. Enable informed introductions.
             </motion.p>
           </div>
 
@@ -123,8 +114,8 @@ const Index = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto mb-16"
+            transition={{ delay: 0.3 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-16"
           >
             {roles.map((role, index) => (
               <RoleCard
@@ -139,45 +130,123 @@ const Index = () => {
             ))}
           </motion.div>
 
-          {/* Chain Visualization */}
+          {/* Process Visualization */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            className="max-w-3xl mx-auto bg-card/60 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-soft"
+            transition={{ delay: 0.5 }}
+            className="max-w-3xl mx-auto bg-card rounded-lg p-6 border border-border"
           >
-            <p className="text-center text-sm text-muted-foreground mb-4">
-              Click any node to explore the journey from farm to table.
+            <p className="text-center text-sm text-muted-foreground mb-5">
+              How qualification works
             </p>
             <InteractiveChainVisualization />
           </motion.div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-20 bg-muted/30">
+      {/* What We Do / Don't Do Section */}
+      <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Building Transparent Trade
+          <div className="max-w-4xl mx-auto">
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground text-center mb-10">
+              What KARAVA provides
             </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Real impact from real partnerships across the Kenya-Europe trade corridor.
-            </p>
-          </motion.div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* What we do */}
+              <div className="bg-card rounded-lg p-6 border border-border">
+                <h3 className="font-display text-lg font-semibold text-foreground mb-4">
+                  We provide
+                </h3>
+                <ul className="space-y-3">
+                  {[
+                    "Structured supplier profiles in buyer-relevant formats",
+                    "Clear buyer requirement specifications",
+                    "Market-fit scoring and gap analysis",
+                    "Readiness signals and qualification guidance",
+                    "Informed introductions when alignment exists",
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm">
+                      <span className="text-primary mt-0.5">✓</span>
+                      <span className="text-foreground">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
+              {/* What we don't do */}
+              <div className="bg-card rounded-lg p-6 border border-border">
+                <h3 className="font-display text-lg font-semibold text-foreground mb-4">
+                  We do not provide
+                </h3>
+                <ul className="space-y-3">
+                  {[
+                    "Product buying or selling",
+                    "Payment processing or pricing",
+                    "Logistics or shipping coordination",
+                    "Compliance execution or certification",
+                    "Guarantees of trade outcomes",
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm">
+                      <span className="text-muted-foreground mt-0.5">—</span>
+                      <span className="text-muted-foreground">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground text-center mb-4">
+              How it works
+            </h2>
+            <p className="text-center text-muted-foreground mb-10 max-w-xl mx-auto">
+              A structured process from intake to qualified introduction
+            </p>
+            
+            <div className="grid md:grid-cols-4 gap-6">
+              {howItWorks.map((step, index) => (
+                <motion.div
+                  key={step.step}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="text-center"
+                >
+                  <div className="w-10 h-10 rounded-md bg-primary/10 text-primary font-display font-bold text-sm flex items-center justify-center mx-auto mb-3">
+                    {step.step}
+                  </div>
+                  <h3 className="font-display font-semibold text-foreground mb-2">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {step.description}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             {stats.map((stat, index) => (
               <StatCard
                 key={stat.label}
                 value={stat.value}
                 label={stat.label}
-                icon={stat.icon}
+                sublabel={stat.sublabel}
                 delay={index * 0.1}
               />
             ))}
@@ -185,121 +254,90 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Value Proposition Section */}
-      <section className="py-20">
+      {/* Who It's For Section */}
+      <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <span className="inline-block px-3 py-1 rounded-full bg-secondary/20 text-secondary text-sm font-medium mb-4">
-                For Processors & Exporters
-              </span>
-              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">
-                Manage 200+ Farms with One Dashboard
-              </h2>
-              <p className="text-muted-foreground mb-6 leading-relaxed">
-                We understand your challenge: tracing hundreds of smallholder farms for EUDR compliance 
-                feels impossible. Nutflix provides batch farm registration, group mapping tools, and 
-                farmer self-onboarding via SMS—making compliance achievable.
-              </p>
-              <ul className="space-y-3 mb-8">
-                {[
-                  "Batch GPS mapping for entire farm networks",
-                  "Risk assessment across your supplier base",
-                  "Automated documentation for EU customs",
-                  "Premium buyer connections"
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <span className="text-secondary mt-1">✓</span>
-                    <span className="text-foreground">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button variant="hero" size="lg">
-                Start Processing Onboarding
-              </Button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              <div className="bg-gradient-card rounded-2xl p-6 border border-border shadow-medium">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground text-center mb-10">
+              Who KARAVA is for
+            </h2>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Kenyan Suppliers */}
+              <div className="bg-card rounded-lg p-6 border border-border">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
-                    🏭
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xl">
+                    🇰🇪
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground">Valley Macadamia Processors</h4>
-                    <p className="text-sm text-muted-foreground">Mombasa, Kenya</p>
-                  </div>
-                  <span className="ml-auto px-2 py-1 bg-primary/10 text-primary text-xs rounded-full font-medium">
-                    EUDR Verified
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-4 py-4 border-y border-border">
-                  <div className="text-center">
-                    <p className="font-display text-2xl font-bold text-foreground">156</p>
-                    <p className="text-xs text-muted-foreground">Partner Farms</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-display text-2xl font-bold text-secondary">92%</p>
-                    <p className="text-xs text-muted-foreground">Compliance Score</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-display text-2xl font-bold text-foreground">5K</p>
-                    <p className="text-xs text-muted-foreground">MT Capacity</p>
+                    <h3 className="font-display font-semibold text-foreground">Kenyan Suppliers</h3>
+                    <p className="text-xs text-muted-foreground">Growers, Processors, Exporters</p>
                   </div>
                 </div>
-
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium text-foreground">Partner Farm Network</p>
-                  <div className="flex flex-wrap gap-2">
-                    {["Mwangi Family Farm", "Kiambu Cooperative", "Thika Growers"].map((farm) => (
-                      <span key={farm} className="px-2 py-1 bg-muted rounded-full text-xs text-muted-foreground">
-                        {farm}
-                      </span>
-                    ))}
-                    <span className="px-2 py-1 text-xs text-primary">+153 more</span>
-                  </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Evaluate whether your operation meets German buyer expectations. Understand gaps before investing in market entry.
+                </p>
+                <div className="bg-muted/50 rounded p-3">
+                  <p className="text-xs text-muted-foreground italic">
+                    "This tells me if I'm ready—and why or why not."
+                  </p>
                 </div>
               </div>
 
-              {/* Decorative elements */}
-              <div className="absolute -top-4 -right-4 w-20 h-20 bg-secondary/20 rounded-full blur-2xl" />
-              <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl" />
-            </motion.div>
+              {/* German Buyers */}
+              <div className="bg-card rounded-lg p-6 border border-border">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xl">
+                    🇩🇪
+                  </div>
+                  <div>
+                    <h3 className="font-display font-semibold text-foreground">German Buyers</h3>
+                    <p className="text-xs text-muted-foreground">Importers, Food Processors</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Define requirements once. Receive pre-qualified supplier matches. Reduce time spent on suppliers who aren't ready.
+                </p>
+                <div className="bg-muted/50 rounded p-3">
+                  <p className="text-xs text-muted-foreground italic">
+                    "This saves me screening time."
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-forest text-primary-foreground">
+      <section className="py-16 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-              Ready to Join the Connected Chain?
+            <h2 className="font-display text-2xl md:text-3xl font-bold mb-4">
+              Assess your market fit
             </h2>
-            <p className="text-primary-foreground/80 max-w-xl mx-auto mb-8">
-              Whether you're growing, processing, exporting, or buying—
-              Nutflix makes every link in the chain transparent, compliant, and profitable.
+            <p className="text-primary-foreground/80 max-w-lg mx-auto mb-8">
+              Whether you're a Kenyan supplier evaluating readiness or a German buyer defining requirements—start with qualification.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="hero" size="xl">
-                Get Started Free
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button 
+                variant="secondary" 
+                size="lg"
+                onClick={() => setSelectedRole("supplier")}
+              >
+                I'm a Supplier <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
-              <Button variant="heroOutline" size="xl" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                Watch Demo
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                onClick={() => setSelectedRole("buyer")}
+              >
+                I'm a Buyer <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </motion.div>
@@ -307,14 +345,14 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-border">
+      <footer className="py-10 border-t border-border">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <Logo size="sm" />
-            <p className="text-sm text-muted-foreground">
-              © 2024 Nutflix. Connecting Kenya's premium exports with European quality standards.
+            <p className="text-xs text-muted-foreground">
+              © 2026 KARAVA. Discovery and qualification for Kenya-Germany agricultural trade.
             </p>
-            <div className="flex gap-6 text-sm text-muted-foreground">
+            <div className="flex gap-6 text-xs text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
               <a href="#" className="hover:text-foreground transition-colors">Terms</a>
               <a href="#" className="hover:text-foreground transition-colors">Contact</a>
@@ -330,20 +368,24 @@ const Index = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-foreground/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
             onClick={() => setSelectedRole(null)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.97, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              exit={{ opacity: 0, scale: 0.97, y: 12 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-card rounded-2xl p-6 md:p-8 max-w-2xl w-full shadow-medium border border-border my-8"
+              className="bg-card rounded-lg p-6 md:p-8 max-w-2xl w-full border border-border my-8 relative"
             >
-              {selectedRole === "processor" && <ProcessorOnboarding onClose={() => setSelectedRole(null)} />}
+              <button
+                onClick={() => setSelectedRole(null)}
+                className="absolute top-4 right-4 p-1 rounded hover:bg-muted transition-colors"
+              >
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+              {selectedRole === "supplier" && <ProcessorOnboarding onClose={() => setSelectedRole(null)} />}
               {selectedRole === "buyer" && <BuyerDiscovery onClose={() => setSelectedRole(null)} />}
-              {selectedRole === "farmer" && <FarmerRegistration onClose={() => setSelectedRole(null)} />}
-              {selectedRole === "exporter" && <ExporterOnboarding onClose={() => setSelectedRole(null)} />}
             </motion.div>
           </motion.div>
         )}

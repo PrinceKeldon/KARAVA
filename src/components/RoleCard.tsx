@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 
 interface RoleCardProps {
   icon: string;
@@ -13,45 +13,26 @@ interface RoleCardProps {
 export function RoleCard({ icon, title, subtitle, description, onClick, delay = 0 }: RoleCardProps) {
   return (
     <motion.button
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: delay * 0.1 }}
-      whileHover={{ y: -8, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      transition={{ delay: delay * 0.08, duration: 0.4 }}
       onClick={onClick}
-      className={cn(
-        "group relative flex flex-col items-start p-6 rounded-2xl text-left",
-        "bg-card border border-border/50",
-        "shadow-soft hover:shadow-card-hover",
-        "transition-all duration-300",
-        "focus:outline-none focus:ring-2 focus:ring-primary/30"
-      )}
+      className="group w-full text-left p-5 rounded-lg bg-card border border-border hover:border-primary/30 transition-all duration-200 shadow-sm hover:shadow-base"
     >
-      {/* Accent gradient on hover */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-warm opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
-      
-      {/* Icon */}
-      <div className="mb-4 text-4xl group-hover:scale-110 transition-transform duration-300">
-        {icon}
-      </div>
-      
-      {/* Content */}
-      <h3 className="font-display text-xl font-semibold text-foreground mb-1">
-        {title}
-      </h3>
-      <p className="text-sm font-medium text-secondary mb-3">
-        {subtitle}
-      </p>
-      <p className="text-sm text-muted-foreground leading-relaxed">
-        {description}
-      </p>
-      
-      {/* Arrow indicator */}
-      <div className="mt-4 flex items-center gap-2 text-primary font-medium text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <span>Get started</span>
-        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xl flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display font-semibold text-foreground text-base mb-0.5">
+            {title}
+          </h3>
+          <p className="text-xs text-muted-foreground mb-2">{subtitle}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+            {description}
+          </p>
+        </div>
+        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
       </div>
     </motion.button>
   );

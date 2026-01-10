@@ -1,0 +1,433 @@
+# KARAVA Backend — MVP Build Specification
+
+**Corridor:** Kenya → Germany
+**Purpose:** Discovery & Market-Fit Qualification (Pre-Trade)
+
+---
+
+## 1. Purpose of This Document
+
+This document defines the **authoritative backend architecture** for the KARAVA MVP.
+
+It is intended to:
+
+* Guide backend implementation by Lovable
+* Keep scope disciplined and aligned to product intent
+* Ensure modular, readable, and extensible code
+* Prevent overbuilding (no trade execution, no logistics, no payments)
+
+This backend supports **discovery and qualification only**.
+
+---
+
+## 2. Core Product Intent (Non-Negotiable)
+
+KARAVA helps:
+
+* Kenyan agricultural suppliers understand **German market fit**
+* German buyers identify **qualified Kenyan supply**
+
+This happens **before trade**.
+
+The backend must:
+
+* Structure information
+* Generate market-fit insights
+* Surface readiness signals
+* Enable informed introductions
+
+The backend must **not**:
+
+* Execute transactions
+* Handle payments
+* Guarantee deals
+* Replace traders, brokers, or logistics providers
+
+---
+
+## 3. Technology Stack
+
+### Backend Framework
+
+* **FastAPI** (Python)
+
+### Database
+
+* **SQLite** (local development)
+* **PostgreSQL** (production-ready)
+
+### ORM
+
+* **SQLAlchemy**
+
+### AI
+
+* Provider-agnostic abstraction
+* Default: OpenAI or Gemini
+* AI used **only** for fit analysis and explanation
+
+### Auth (out of scope for MVP)
+
+* No authentication required initially
+* All endpoints open or protected via basic admin flag if needed
+
+---
+
+## 4. High-Level Architecture
+
+```
+Client (Web / Mobile)
+        |
+        v
+FastAPI Routers
+        |
+        v
+Service Layer (Business Logic)
+        |
+        v
+Database (SQLAlchemy Models)
+        |
+        v
+AI Fit Engine (Isolated)
+```
+
+**AI is not embedded in routers.**
+All intelligence lives in a dedicated service.
+
+---
+
+## 5. Project Structure
+
+```
+app/
+├── main.py                # Application entry point
+├── database.py            # DB connection & session
+├── models.py              # SQLAlchemy models
+├── schemas.py             # Pydantic schemas
+├── core/
+│   └── config.py          # Environment & settings
+├── routers/
+│   ├── health.py
+│   ├── suppliers.py
+│   ├── buyers.py
+│   ├── fit.py
+│   └── intros.py
+├── services/
+│   ├── fit_engine.py      # AI-powered fit analysis
+│   └── scoring.py         # Deterministic scoring helpers
+└── utils/
+    └── enums.py           # Shared enums
+```
+
+Each module must be **small, readable, and single-responsibility**.
+
+---
+
+## 6. Core Domain Models
+
+### 6.1 Supplier (Kenya)
+
+Represents a grower, exporter, or aggregator.
+
+**Fields (initial MVP):**
+
+* id
+* company_name
+* contact_name
+* location_county
+* product_category
+* production_capacity_monthly
+* processing_level
+* certifications (array)
+* export_experience (boolean)
+* created_at
+
+**Notes:**
+
+* No pricing
+* No guarantees
+* No logistics data
+
+---
+
+### 6.2 Buyer (Germany)
+
+Represents an importer, processor, or wholesaler.
+
+**Fields:**
+
+* id
+* company_name
+* buyer_type (importer / processor / wholesaler)
+* product_category
+* required_specs (JSON)
+* min_order_quantity
+* frequency (spot / recurring)
+* risk_tolerance (low / medium / high)
+* created_at
+
+---
+
+### 6.3 FitAnalysis (Computed Intelligence)
+
+Represents the result of supplier–buyer alignment.
+
+**Fields:**
+
+* id
+* supplier_id
+* buyer_id
+* fit_score (0–100)
+* readiness_score (0–100)
+* gaps (JSON array of strings)
+* notes (optional)
+* created_at
+
+**Important:**
+
+* FitAnalysis may be recomputed
+* Persistence is optional (can cache results)
+
+---
+
+### 6.4 IntroRequest
+
+Represents a request to connect a supplier and buyer.
+
+**Fields:**
+
+* id
+* supplier_id
+* buyer_id
+* status (pending / approved / rejected)
+* created_at
+
+Human-in-the-loop by design.
+
+---
+
+## 7. API Endpoints (MVP)
+
+### 7.1 Health
+
+```
+GET /health
+```
+
+Returns:
+
+```json
+{ "status": "ok" }
+```
+
+---
+
+### 7.2 Suppliers
+
+```
+POST /suppliers
+GET  /suppliers
+GET  /suppliers/{id}
+```
+
+Purpose:
+
+* Supplier onboarding
+* Data input for fit analysis
+
+---
+
+### 7.3 Buyers
+
+```
+POST /buyers
+GET  /buyers
+GET  /buyers/{id}
+```
+
+Purpose:
+
+* Structured buyer intent capture
+
+---
+
+### 7.4 Market Fit Analysis (Core Value)
+
+```
+POST /fit/analyze
+```
+
+**Request**
+
+```json
+{
+  "supplier_id": 1,
+  "buyer_id": 2
+}
+```
+
+**Response**
+
+```json
+{
+  "fit_score": 78,
+  "readiness_score": 65,
+  "gaps": [
+    "Moisture content above typical German tolerance",
+    "Missing HACCP certification"
+  ]
+}
+```
+
+This endpoint:
+
+* Calls the AI Fit Engine
+* Returns explainable, human-readable insights
+
+---
+
+### 7.5 Introduction Requests
+
+```
+POST /intros/request
+GET  /intros
+```
+
+Purpose:
+
+* Allow controlled introductions
+* No automatic matching or deal execution
+
+---
+
+## 8. AI Fit Engine (Critical Design)
+
+### Location
+
+```
+services/fit_engine.py
+```
+
+### Responsibilities
+
+* Translate supplier data into German buyer context
+* Compare against buyer specs
+* Generate:
+
+  * Fit score
+  * Readiness score
+  * Gap explanations
+
+### Constraints
+
+* AI output must be:
+
+  * Explainable
+  * Non-binding
+  * Reviewable
+* No hallucinated certifications or guarantees
+
+### Prompt Design
+
+Prompts must:
+
+* Be corridor-specific (Kenya → Germany)
+* Emphasize risk, gaps, and uncertainty
+* Avoid optimistic language
+
+---
+
+## 9. Scoring Logic
+
+Use a hybrid approach:
+
+* Deterministic rules (e.g. missing certifications)
+* AI-generated reasoning for nuance
+
+Scores must be:
+
+* Directional, not absolute
+* Clearly described as guidance
+
+---
+
+## 10. Configuration & Environment
+
+### `.env.example`
+
+* DATABASE_URL
+* AI_PROVIDER
+* AI_API_KEY
+* ENV (development / production)
+
+### `config.py`
+
+* Pydantic-based settings
+* Centralized configuration access
+
+---
+
+## 11. Monetization Hooks (Design Only)
+
+No billing in MVP.
+
+Design considerations:
+
+* Rate-limit fit analyses per supplier
+* Flag “premium insights” internally
+* Prepare for supplier subscriptions
+
+---
+
+## 12. Non-Goals (Explicit)
+
+The backend must not include:
+
+* Payments
+* Pricing logic
+* Logistics tracking
+* Compliance automation
+* Messaging/chat
+* Notifications
+
+These are future layers.
+
+---
+
+## 13. Build Order (Recommended)
+
+1. Project skeleton
+2. Database + models
+3. Supplier endpoints
+4. Buyer endpoints
+5. Fit analysis service
+6. Fit endpoint
+7. Intro request flow
+
+Stop. Test. Learn.
+
+---
+
+## 14. Definition of Success
+
+The backend is successful if:
+
+* A Kenyan supplier gains clarity on German readiness
+* A German buyer reduces screening time
+* Insights are valuable even without trade execution
+
+---
+
+## 15. Final Instruction to Lovable
+
+Build this as:
+
+* Clear
+* Boring
+* Correct
+* Extensible
+
+KARAVA is infrastructure.
+Infrastructure earns trust by restraint.
+
+---

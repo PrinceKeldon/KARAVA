@@ -334,7 +334,7 @@ const Index = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                className="border-white/40 text-white hover:bg-white hover:text-primary"
                 onClick={() => setSelectedRole("buyer")}
               >
                 I'm a Buyer <ArrowRight className="w-4 h-4 ml-1" />

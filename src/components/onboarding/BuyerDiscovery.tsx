@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, Check, X, ArrowRight, Building2 } from "lucide-react";
+import { Search, Filter, Check, ArrowRight, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSuppliers } from "@/hooks/useSuppliers";
+import { useRequestIntro } from "@/hooks/useIntroRequests";
+import { useToast } from "@/hooks/use-toast";
+import { calculateFitScore } from "@/lib/fitEngine";
+import type { Supplier } from "@/types/supabase";
 
-interface Supplier {
-  id: number;
+interface DisplaySupplier {
+  id: string;
   name: string;
   location: string;
   products: string[];
@@ -15,48 +20,32 @@ interface Supplier {
   gaps: string[];
 }
 
-const suppliers: Supplier[] = [
-  {
-    id: 1,
-    name: "Thika Valley Processors",
-    location: "Thika, Kenya",
-    products: ["Macadamia Kernels", "Macadamia Oil"],
-    fitScore: 85,
-    certifications: ["HACCP", "ISO 22000"],
-    capacity: "3,500 MT/year",
-    gaps: ["EUDR documentation in progress"],
-  },
-  {
-    id: 2,
-    name: "Kiambu Sesame Cooperative",
-    location: "Kiambu, Kenya",
-    products: ["Sesame Seeds", "Sesame Oil"],
-    fitScore: 72,
-    certifications: ["Organic"],
-    capacity: "1,800 MT/year",
-    gaps: ["Missing HACCP", "Traceability incomplete"],
-  },
-  {
-    id: 3,
-    name: "Kenya Premium Exports",
-    location: "Nairobi, Kenya",
-    products: ["Macadamia Kernels", "Sesame Seeds"],
-    fitScore: 91,
-    certifications: ["HACCP", "ISO 22000", "Organic", "EUDR Compliant"],
-    capacity: "8,000 MT/year",
-    gaps: [],
-  },
-];
-
 const filters = {
   products: ["All Products", "Macadamia", "Sesame Seeds", "Sesame Oil"],
   fitScore: ["All Scores", "80%+", "60%+"],
   certifications: ["Any", "Organic", "HACCP", "EUDR Compliant"],
 };
 
+function transformSupplier(supplier: Supplier): DisplaySupplier {
+  const { fitScore, gaps } = calculateFitScore(supplier);
+  
+  return {
+    id: supplier.id,
+    name: supplier.company_name,
+    location: `${supplier.location_county}, Kenya`,
+    products: supplier.product_category.split(', ').filter(Boolean),
+    fitScore,
+    certifications: supplier.certifications || [],
+    capacity: supplier.production_capacity_monthly 
+      ? `${Math.round(supplier.production_capacity_monthly * 12).toLocaleString()} MT/year`
+      : 'Not specified',
+    gaps,
+  };
+}
+
 function SupplierCard({ supplier, onSelect }: { 
-  supplier: Supplier; 
-  onSelect: (supplier: Supplier) => void;
+  supplier: DisplaySupplier; 
+  onSelect: (supplier: DisplaySupplier) => void;
 }) {
   return (
     <motion.div
@@ -97,7 +86,7 @@ function SupplierCard({ supplier, onSelect }: {
       {supplier.gaps.length > 0 && (
         <div className="mb-3 p-2 bg-[hsl(40_90%_50%/0.05)] rounded text-xs">
           <span className="text-[hsl(40_90%_40%)] font-medium">Gaps: </span>
-          <span className="text-muted-foreground">{supplier.gaps.join(", ")}</span>
+          <span className="text-muted-foreground">{supplier.gaps.slice(0, 2).join(", ")}</span>
         </div>
       )}
 
@@ -111,10 +100,11 @@ function SupplierCard({ supplier, onSelect }: {
   );
 }
 
-function SupplierDetail({ supplier, onBack, onRequestIntro }: { 
-  supplier: Supplier; 
+function SupplierDetail({ supplier, onBack, onRequestIntro, isRequesting }: { 
+  supplier: DisplaySupplier; 
   onBack: () => void;
   onRequestIntro: () => void;
+  isRequesting: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -153,11 +143,13 @@ function SupplierDetail({ supplier, onBack, onRequestIntro }: {
       <div>
         <p className="text-sm font-medium text-foreground mb-2">Certifications</p>
         <div className="flex flex-wrap gap-1.5">
-          {supplier.certifications.map(cert => (
+          {supplier.certifications.length > 0 ? supplier.certifications.map(cert => (
             <span key={cert} className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium flex items-center gap-1">
               <Check className="w-3 h-3" /> {cert}
             </span>
-          ))}
+          )) : (
+            <span className="text-sm text-muted-foreground">No certifications listed</span>
+          )}
         </div>
       </div>
 
@@ -176,11 +168,17 @@ function SupplierDetail({ supplier, onBack, onRequestIntro }: {
       )}
 
       <div className="flex gap-3">
-        <Button variant="ghost" onClick={onBack} className="flex-1">
+        <Button variant="ghost" onClick={onBack} className="flex-1" disabled={isRequesting}>
           Back to List
         </Button>
-        <Button onClick={onRequestIntro} className="flex-1" disabled={supplier.fitScore < 70}>
-          Request Introduction
+        <Button onClick={onRequestIntro} className="flex-1" disabled={supplier.fitScore < 70 || isRequesting}>
+          {isRequesting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Requesting...
+            </>
+          ) : (
+            'Request Introduction'
+          )}
         </Button>
       </div>
 
@@ -193,7 +191,41 @@ function SupplierDetail({ supplier, onBack, onRequestIntro }: {
   );
 }
 
-export function BuyerDiscovery({ onClose }: { onClose: () => void }) {
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="bg-muted/30 rounded-md p-4 border border-border animate-pulse">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="h-5 bg-muted rounded w-40 mb-2"></div>
+              <div className="h-4 bg-muted rounded w-24"></div>
+            </div>
+            <div className="h-6 bg-muted rounded w-16"></div>
+          </div>
+          <div className="flex gap-1 mb-3">
+            <div className="h-5 bg-muted rounded w-20"></div>
+            <div className="h-5 bg-muted rounded w-16"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="text-center py-12">
+      <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+      <h3 className="font-medium text-foreground mb-2">No suppliers found</h3>
+      <p className="text-sm text-muted-foreground">
+        No suppliers have registered yet. Check back later or adjust your filters.
+      </p>
+    </div>
+  );
+}
+
+export function BuyerDiscovery({ onClose, buyerId }: { onClose: () => void; buyerId?: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState({
     product: "All Products",
@@ -201,8 +233,72 @@ export function BuyerDiscovery({ onClose }: { onClose: () => void }) {
     certification: "Any",
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<DisplaySupplier | null>(null);
   const [introRequested, setIntroRequested] = useState(false);
+  
+  const { data: suppliers, isLoading, error } = useSuppliers();
+  const requestIntro = useRequestIntro();
+  const { toast } = useToast();
+  
+  const displaySuppliers = (suppliers || []).map(transformSupplier);
+  
+  // Apply filters
+  const filteredSuppliers = displaySuppliers.filter(supplier => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      if (!supplier.name.toLowerCase().includes(query) && 
+          !supplier.location.toLowerCase().includes(query) &&
+          !supplier.products.some(p => p.toLowerCase().includes(query))) {
+        return false;
+      }
+    }
+    
+    // Product filter
+    if (activeFilters.product !== "All Products") {
+      if (!supplier.products.some(p => p.toLowerCase().includes(activeFilters.product.toLowerCase()))) {
+        return false;
+      }
+    }
+    
+    // Fit score filter
+    if (activeFilters.fitScore === "80%+") {
+      if (supplier.fitScore < 80) return false;
+    } else if (activeFilters.fitScore === "60%+") {
+      if (supplier.fitScore < 60) return false;
+    }
+    
+    // Certification filter
+    if (activeFilters.certification !== "Any") {
+      if (!supplier.certifications.includes(activeFilters.certification)) return false;
+    }
+    
+    return true;
+  });
+
+  const handleRequestIntro = async () => {
+    if (!selectedSupplier) return;
+    
+    try {
+      await requestIntro.mutateAsync({
+        supplier_id: selectedSupplier.id,
+        buyer_id: buyerId || 'anonymous', // Use buyer ID if available
+        status: 'pending',
+      });
+      
+      setIntroRequested(true);
+      toast({
+        title: "Introduction Requested",
+        description: "We'll evaluate the match and facilitate contact if alignment is confirmed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to request introduction. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (introRequested) {
     return (
@@ -227,7 +323,8 @@ export function BuyerDiscovery({ onClose }: { onClose: () => void }) {
         <SupplierDetail 
           supplier={selectedSupplier} 
           onBack={() => setSelectedSupplier(null)}
-          onRequestIntro={() => setIntroRequested(true)}
+          onRequestIntro={handleRequestIntro}
+          isRequesting={requestIntro.isPending}
         />
         <button
           onClick={onClose}
@@ -298,15 +395,25 @@ export function BuyerDiscovery({ onClose }: { onClose: () => void }) {
       </AnimatePresence>
 
       {/* Supplier Cards */}
-      <div className="space-y-3 mb-4">
-        {suppliers.map((supplier) => (
-          <SupplierCard
-            key={supplier.id}
-            supplier={supplier}
-            onSelect={setSelectedSupplier}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : error ? (
+        <div className="text-center py-8">
+          <p className="text-sm text-destructive">Failed to load suppliers. Please try again.</p>
+        </div>
+      ) : filteredSuppliers.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div className="space-y-3 mb-4">
+          {filteredSuppliers.map((supplier) => (
+            <SupplierCard
+              key={supplier.id}
+              supplier={supplier}
+              onSelect={setSelectedSupplier}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Cancel link */}
       <button

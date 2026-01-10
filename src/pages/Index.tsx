@@ -7,12 +7,16 @@ import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { ProcessorOnboarding } from "@/components/onboarding/ProcessorOnboarding";
 import { BuyerDiscovery } from "@/components/onboarding/BuyerDiscovery";
+import { BuyerOnboarding } from "@/components/onboarding/BuyerOnboarding";
 import { ArrowRight, X } from "lucide-react";
 
 type Role = "supplier" | "buyer" | null;
+type BuyerFlow = "onboarding" | "discovery";
 
 const Index = () => {
   const [selectedRole, setSelectedRole] = useState<Role>(null);
+  const [buyerFlow, setBuyerFlow] = useState<BuyerFlow>("onboarding");
+  const [buyerId, setBuyerId] = useState<string | undefined>();
 
   const roles = [
     {
@@ -59,6 +63,23 @@ const Index = () => {
       description: "When alignment exists, facilitate informed introductions between qualified parties.",
     },
   ];
+
+  const handleBuyerClick = () => {
+    setSelectedRole("buyer");
+    setBuyerFlow("onboarding");
+    setBuyerId(undefined);
+  };
+
+  const handleBuyerOnboardingComplete = (id: string) => {
+    setBuyerId(id);
+    setBuyerFlow("discovery");
+  };
+
+  const handleCloseModal = () => {
+    setSelectedRole(null);
+    setBuyerFlow("onboarding");
+    setBuyerId(undefined);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -124,7 +145,7 @@ const Index = () => {
                 title={role.title}
                 subtitle={role.subtitle}
                 description={role.description}
-                onClick={() => setSelectedRole(role.id)}
+                onClick={() => role.id === "buyer" ? handleBuyerClick() : setSelectedRole(role.id)}
                 delay={index}
               />
             ))}
@@ -335,7 +356,7 @@ const Index = () => {
                 variant="outline" 
                 size="lg" 
                 className="border-white/40 bg-white/10 text-white hover:bg-white hover:text-primary"
-                onClick={() => setSelectedRole("buyer")}
+                onClick={handleBuyerClick}
               >
                 I'm a Buyer <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
@@ -369,7 +390,7 @@ const Index = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-            onClick={() => setSelectedRole(null)}
+            onClick={handleCloseModal}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: 12 }}
@@ -379,13 +400,18 @@ const Index = () => {
               className="bg-card rounded-lg p-6 md:p-8 max-w-2xl w-full border border-border my-8 relative"
             >
               <button
-                onClick={() => setSelectedRole(null)}
+                onClick={handleCloseModal}
                 className="absolute top-4 right-4 p-1 rounded hover:bg-muted transition-colors"
               >
                 <X className="w-5 h-5 text-muted-foreground" />
               </button>
-              {selectedRole === "supplier" && <ProcessorOnboarding onClose={() => setSelectedRole(null)} />}
-              {selectedRole === "buyer" && <BuyerDiscovery onClose={() => setSelectedRole(null)} />}
+              {selectedRole === "supplier" && <ProcessorOnboarding onClose={handleCloseModal} />}
+              {selectedRole === "buyer" && buyerFlow === "onboarding" && (
+                <BuyerOnboarding onClose={handleCloseModal} onComplete={handleBuyerOnboardingComplete} />
+              )}
+              {selectedRole === "buyer" && buyerFlow === "discovery" && (
+                <BuyerDiscovery onClose={handleCloseModal} buyerId={buyerId} />
+              )}
             </motion.div>
           </motion.div>
         )}

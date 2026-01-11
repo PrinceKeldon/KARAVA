@@ -64,22 +64,36 @@ export interface Database {
         Row: Supplier;
         Insert: SupplierInsert;
         Update: SupplierUpdate;
+        Relationships: [];
       };
       buyers: {
         Row: Buyer;
         Insert: BuyerInsert;
         Update: BuyerUpdate;
+        Relationships: [];
       };
       fit_analyses: {
         Row: FitAnalysis;
         Insert: FitAnalysisInsert;
         Update: Partial<Omit<FitAnalysis, 'id'>>;
+        Relationships: [];
       };
       intro_requests: {
         Row: IntroRequest;
         Insert: IntroRequestInsert;
         Update: Partial<Omit<IntroRequest, 'id'>>;
+        Relationships: [];
       };
     };
+    Views: {};
+    Functions: {};
+    Enums: {
+      processing_level: ProcessingLevel;
+      buyer_type: BuyerType;
+      order_frequency: OrderFrequency;
+      risk_tolerance: RiskTolerance;
+      intro_status: IntroStatus;
+    };
+    CompositeTypes: {};
   };
 }

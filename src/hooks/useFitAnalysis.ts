@@ -18,7 +18,7 @@ export function useFitAnalyses(supplierId?: string) {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data || [];
+      return (data as FitAnalysis[]) || [];
     },
   });
 }
@@ -28,14 +28,14 @@ export function useCreateFitAnalysis() {
   
   return useMutation({
     mutationFn: async (analysis: FitAnalysisInsert): Promise<FitAnalysis> => {
-      const { data, error } = await supabase
-        .from('fit_analyses')
-        .insert(analysis)
+      const { data, error } = await (supabase
+        .from('fit_analyses') as any)
+        .insert([analysis])
         .select()
         .single();
       
       if (error) throw error;
-      return data;
+      return data as FitAnalysis;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fit_analyses'] });

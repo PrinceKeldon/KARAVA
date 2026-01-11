@@ -12,7 +12,7 @@ export function useSuppliers() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      return (data as Supplier[]) || [];
     },
   });
 }
@@ -30,7 +30,7 @@ export function useSupplier(id: string | undefined) {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Supplier;
     },
     enabled: !!id,
   });
@@ -41,14 +41,14 @@ export function useCreateSupplier() {
   
   return useMutation({
     mutationFn: async (supplier: SupplierInsert): Promise<Supplier> => {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .insert(supplier)
+      const { data, error } = await (supabase
+        .from('suppliers') as any)
+        .insert([supplier])
         .select()
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Supplier;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });

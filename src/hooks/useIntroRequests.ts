@@ -12,7 +12,7 @@ export function useIntroRequests() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      return (data as IntroRequest[]) || [];
     },
   });
 }
@@ -22,14 +22,14 @@ export function useRequestIntro() {
   
   return useMutation({
     mutationFn: async (request: IntroRequestInsert): Promise<IntroRequest> => {
-      const { data, error } = await supabase
-        .from('intro_requests')
-        .insert(request)
+      const { data, error } = await (supabase
+        .from('intro_requests') as any)
+        .insert([request])
         .select()
         .single();
       
       if (error) throw error;
-      return data;
+      return data as IntroRequest;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intro_requests'] });

@@ -12,7 +12,7 @@ export function useBuyers() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      return (data as Buyer[]) || [];
     },
   });
 }
@@ -30,7 +30,7 @@ export function useBuyer(id: string | undefined) {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Buyer;
     },
     enabled: !!id,
   });
@@ -41,14 +41,14 @@ export function useCreateBuyer() {
   
   return useMutation({
     mutationFn: async (buyer: BuyerInsert): Promise<Buyer> => {
-      const { data, error } = await supabase
-        .from('buyers')
-        .insert(buyer)
+      const { data, error } = await (supabase
+        .from('buyers') as any)
+        .insert([buyer])
         .select()
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Buyer;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['buyers'] });

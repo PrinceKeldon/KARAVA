@@ -57,6 +57,13 @@ export type BuyerUpdate = Partial<Omit<Buyer, 'id'>>;
 export type FitAnalysisInsert = Omit<FitAnalysis, 'id' | 'created_at'>;
 export type IntroRequestInsert = Omit<IntroRequest, 'id' | 'created_at'>;
 
+export interface FeatureFlag {
+  id: string;
+  key: string;
+  enabled: boolean;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -82,6 +89,12 @@ export interface Database {
         Row: IntroRequest;
         Insert: IntroRequestInsert;
         Update: Partial<Omit<IntroRequest, 'id'>>;
+        Relationships: [];
+      };
+      feature_flags: {
+        Row: FeatureFlag;
+        Insert: Omit<FeatureFlag, 'id' | 'created_at'>;
+        Update: Partial<Omit<FeatureFlag, 'id'>>;
         Relationships: [];
       };
     };

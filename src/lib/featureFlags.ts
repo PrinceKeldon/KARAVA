@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
+interface FeatureFlag {
+  key: string;
+  enabled: boolean;
+}
+
 export async function getFeatureFlags(): Promise<Record<string, boolean>> {
   const { data, error } = await supabase
     .from("feature_flags")
@@ -9,7 +14,8 @@ export async function getFeatureFlags(): Promise<Record<string, boolean>> {
     return {};
   }
 
+  const flags = data as FeatureFlag[];
   return Object.fromEntries(
-    data.map(flag => [flag.key, flag.enabled])
+    flags.map(flag => [flag.key, flag.enabled])
   );
 }

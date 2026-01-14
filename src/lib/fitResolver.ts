@@ -1,20 +1,21 @@
-import { calculateFitScore } from "./fitEngine";
+import { calculateFitScore, FitResult } from "./fitEngine";
 import { explainFitWithAI } from "./aiExplainer";
+import type { Supplier, Buyer } from "@/types/supabase";
 
 export async function resolveFitAnalysis(
-  supplier: SupplierProfile,
-  buyer: BuyerProfile
+  supplier: Supplier,
+  buyer: Buyer
 ) {
-  const base = calculateFitScore(supplier, buyer);
+  const base: FitResult = calculateFitScore(supplier, buyer);
 
   const explanation = await explainFitWithAI(base.gaps, {
-    supplierName: supplier.name,
-    buyerName: buyer.companyName,
+    supplierName: supplier.company_name,
+    buyerName: buyer.company_name,
     corridor: "Kenya → Germany",
   });
 
   return {
-    score: base.score,
+    score: base.fitScore,
     gaps: base.gaps,
     explanation:
       explanation ??

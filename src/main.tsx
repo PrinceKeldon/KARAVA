@@ -4,7 +4,7 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-import { hydrateFeaturesFromDB } from "@/config/features";
+import { hydrateFeaturesFromDB } from "@/lib/features";
 import { getFeatureFlags } from "@/lib/featureFlags";
 
 getFeatureFlags().then(hydrateFeaturesFromDB);

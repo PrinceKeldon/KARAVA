@@ -1,87 +1,122 @@
 import type { Supplier, Buyer } from '@/types/supabase';
+import { 
+  calculateKenyaGermanyReadiness, 
+  calculateQuickReadiness,
+  getStatusLabel,
+  getStatusColor,
+  type ScoreResult,
+  type ScoreBand,
+  type HardGateResult,
+  type ReadinessCategory,
+  type AppliedRiskPenalty,
+} from './scoring';
 
 export interface FitResult {
   fitScore: number;
   readinessScore: number;
+  status: ScoreBand;
+  statusLabel: string;
+  statusColor: string;
   gaps: string[];
+  // Detailed breakdown (only available with full scoring)
+  gateResults?: HardGateResult[];
+  failedGates?: HardGateResult[];
+  readinessBreakdown?: ReadinessCategory[];
+  appliedPenalties?: AppliedRiskPenalty[];
+  totalPenalty?: number;
 }
 
-const REQUIRED_CERTS_GERMAN_MARKET = ['HACCP', 'ISO 22000'];
-const EUDR_CERT = 'EUDR Compliant';
-
+/**
+ * Calculate fit score using the Kenya-Germany readiness scoring system
+ * 
+ * Architecture (from doc/scoring/kenya-germany-readiness-spec.md):
+ * 1. Hard Gates → If any fail: BLOCKED, score = 0
+ * 2. Readiness Score → Weighted category scoring (0-100)
+ * 3. Risk Discounts → Penalties applied after readiness score
+ * 
+ * If buyer requirements are provided, additional buyer-specific adjustments are applied.
+ */
 export function calculateFitScore(
   supplier: Supplier,
   buyerRequirements?: Partial<Buyer>
 ): FitResult {
-  let fitScore = 100;
-  let readinessScore = 100;
-  const gaps: string[] = [];
+  // Use quick readiness for suppliers without full scoring data
+  // This provides a reasonable estimate when detailed fields aren't available
+  const hasDetailedData = Boolean(
+    supplier.export_license_number || 
+    supplier.has_grade_definitions ||
+    supplier.has_lot_coding_system
+  );
 
-  const supplierCerts = supplier.certifications || [];
+  let result: ScoreResult;
+  
+  if (hasDetailedData) {
+    // Full Kenya-Germany readiness scoring
+    result = calculateKenyaGermanyReadiness(supplier);
+  } else {
+    // Quick assessment based on available data
+    const quick = calculateQuickReadiness(supplier);
+    result = {
+      finalScore: quick.score,
+      readinessScore: quick.score,
+      status: quick.status,
+      gateResults: [],
+      failedGates: [],
+      readinessBreakdown: [],
+      appliedPenalties: [],
+      totalPenalty: 0,
+      gaps: quick.gaps,
+    };
+  }
 
-  // Check required certifications
-  REQUIRED_CERTS_GERMAN_MARKET.forEach(cert => {
-    if (!supplierCerts.includes(cert)) {
-      fitScore -= 15;
-      readinessScore -= 10;
-      gaps.push(`Missing ${cert} certification`);
+  let fitScore = result.finalScore;
+  const additionalGaps: string[] = [];
+
+  // Apply buyer-specific adjustments (on top of readiness score)
+  if (buyerRequirements) {
+    // Check capacity against buyer minimum
+    if (buyerRequirements.min_order_quantity && supplier.production_capacity_monthly) {
+      if (supplier.production_capacity_monthly < buyerRequirements.min_order_quantity) {
+        fitScore -= 15;
+        additionalGaps.push(
+          `Production capacity (${supplier.production_capacity_monthly} MT/mo) below buyer minimum (${buyerRequirements.min_order_quantity} MT)`
+        );
+      }
     }
-  });
 
-  // Check EUDR compliance
-  if (!supplierCerts.includes(EUDR_CERT)) {
-    fitScore -= 10;
-    readinessScore -= 15;
-    gaps.push('EUDR documentation incomplete');
-  }
-
-  // Check export experience
-  if (!supplier.export_experience) {
-    fitScore -= 10;
-    readinessScore -= 5;
-    gaps.push('No prior export experience');
-  }
-
-  // Check processing level
-  if (supplier.processing_level === 'raw') {
-    fitScore -= 5;
-    gaps.push('Product requires additional processing for German market');
-  }
-
-  // Check capacity against buyer minimum (if provided)
-  if (buyerRequirements?.min_order_quantity && supplier.production_capacity_monthly) {
-    if (supplier.production_capacity_monthly < buyerRequirements.min_order_quantity) {
-      fitScore -= 20;
-      gaps.push(`Production capacity below buyer minimum (${buyerRequirements.min_order_quantity} MT)`);
+    // Check product category alignment
+    if (buyerRequirements.product_category) {
+      const supplierProducts = supplier.product_category.toLowerCase();
+      const buyerCategory = buyerRequirements.product_category.toLowerCase();
+      if (!supplierProducts.includes(buyerCategory)) {
+        fitScore -= 20;
+        additionalGaps.push('Product category does not match buyer requirements');
+      }
     }
   }
 
-  // Check product category alignment
-  if (buyerRequirements?.product_category) {
-    if (!supplier.product_category.toLowerCase().includes(buyerRequirements.product_category.toLowerCase())) {
-      fitScore -= 25;
-      gaps.push('Product category does not match buyer requirements');
-    }
-  }
-
-  // Bonus for Organic certification
-  if (supplierCerts.includes('Organic')) {
-    fitScore += 5;
-    readinessScore += 5;
-  }
-
-  // Bonus for Fair Trade
-  if (supplierCerts.includes('Fair Trade')) {
-    fitScore += 3;
-  }
+  // Clamp final fit score
+  fitScore = Math.max(0, Math.min(100, fitScore));
 
   return {
-    fitScore: Math.max(0, Math.min(100, fitScore)),
-    readinessScore: Math.max(0, Math.min(100, readinessScore)),
-    gaps,
+    fitScore,
+    readinessScore: result.readinessScore,
+    status: result.status,
+    statusLabel: getStatusLabel(result.status),
+    statusColor: getStatusColor(result.status),
+    gaps: [...result.gaps, ...additionalGaps],
+    gateResults: result.gateResults,
+    failedGates: result.failedGates,
+    readinessBreakdown: result.readinessBreakdown,
+    appliedPenalties: result.appliedPenalties,
+    totalPenalty: result.totalPenalty,
   };
 }
 
+/**
+ * Calculate readiness from onboarding form data
+ * Used during the supplier onboarding flow
+ */
 export function calculateReadinessFromFormData(formData: {
   certifications: string[];
   eudrStatus: string;
@@ -89,18 +124,25 @@ export function calculateReadinessFromFormData(formData: {
   exportCapacity: number;
   annualVolume: number;
 }): FitResult {
-  let readinessScore = 100;
+  let readinessScore = 50; // Start at midpoint
   const gaps: string[] = [];
 
-  // Check certifications
-  REQUIRED_CERTS_GERMAN_MARKET.forEach(cert => {
-    if (!formData.certifications.includes(cert)) {
-      readinessScore -= 12;
-      gaps.push(`Missing ${cert} certification`);
-    }
-  });
+  // EU Food Safety Certification check
+  const hasEUFoodSafety = formData.certifications.some(c => 
+    ['BRCGS', 'IFS', 'FSSC 22000', 'FSSC22000'].includes(c)
+  );
+  if (!hasEUFoodSafety) {
+    readinessScore -= 15;
+    gaps.push('Missing EU-recognised food safety certification (BRCGS/IFS/FSSC 22000)');
+  }
 
-  // Check EUDR status
+  // HACCP baseline
+  if (!formData.certifications.includes('HACCP')) {
+    readinessScore -= 10;
+    gaps.push('Missing HACCP certification');
+  }
+
+  // EUDR status
   if (formData.eudrStatus === 'Not started') {
     readinessScore -= 20;
     gaps.push('EUDR documentation not started');
@@ -110,36 +152,49 @@ export function calculateReadinessFromFormData(formData: {
   } else if (formData.eudrStatus === 'Unsure') {
     readinessScore -= 15;
     gaps.push('EUDR compliance status unknown');
+  } else if (formData.eudrStatus === 'Complete') {
+    readinessScore += 10;
   }
 
-  // Check traceability
+  // Traceability
   if (formData.traceability === 'None') {
     readinessScore -= 15;
     gaps.push('No traceability to farm level');
   } else if (formData.traceability === 'Partial') {
     readinessScore -= 8;
-    gaps.push('Partial traceability - full farm-level tracing recommended');
+    gaps.push('Partial traceability – full farm-level tracing recommended');
+  } else if (formData.traceability === 'Full') {
+    readinessScore += 10;
   }
 
-  // Check if export capacity is lower than annual volume (a positive signal)
+  // Export orientation bonus
   if (formData.exportCapacity > 0 && formData.annualVolume > 0) {
     const exportRatio = formData.exportCapacity / formData.annualVolume;
     if (exportRatio >= 0.5) {
-      readinessScore += 5; // Bonus for strong export orientation
+      readinessScore += 5;
     }
   }
 
-  // Bonus certifications
-  if (formData.certifications.includes('Organic')) {
-    readinessScore += 5;
-  }
-  if (formData.certifications.includes('Fair Trade')) {
-    readinessScore += 3;
-  }
+  // Certification bonuses
+  if (formData.certifications.includes('Organic')) readinessScore += 5;
+  if (formData.certifications.includes('Fair Trade')) readinessScore += 3;
+
+  const finalScore = Math.max(0, Math.min(100, readinessScore));
+  const status: ScoreBand = 
+    finalScore === 0 ? 'BLOCKED' :
+    finalScore < 60 ? 'NOT_READY' :
+    finalScore < 80 ? 'CONDITIONALLY_READY' : 'HIGH_READINESS';
 
   return {
-    fitScore: readinessScore, // For preliminary assessment, fitScore = readinessScore
-    readinessScore: Math.max(0, Math.min(100, readinessScore)),
+    fitScore: finalScore,
+    readinessScore: finalScore,
+    status,
+    statusLabel: getStatusLabel(status),
+    statusColor: getStatusColor(status),
     gaps,
   };
 }
+
+// Re-export scoring utilities
+export { getStatusLabel, getStatusColor } from './scoring';
+export type { ScoreBand, HardGateResult, ReadinessCategory, AppliedRiskPenalty } from './scoring';

@@ -1,13 +1,19 @@
 import { FEATURES } from "@/lib/features";
 import { supabase } from "@/integrations/supabase/client";
+import type { ScoreBand, HardGateResult, AppliedRiskPenalty } from "@/lib/fitEngine";
+
+export interface AIExplainerContext {
+  supplierName: string;
+  buyerName: string;
+  corridor: "Kenya → Germany";
+  status?: ScoreBand;
+  failedGates?: HardGateResult[];
+  appliedPenalties?: AppliedRiskPenalty[];
+}
 
 export async function explainFitWithAI(
   gaps: string[],
-  context: {
-    supplierName: string;
-    buyerName: string;
-    corridor: "Kenya → Germany";
-  }
+  context: AIExplainerContext
 ): Promise<string | null> {
   // Feature flag hard stop
   if (!FEATURES.AI_EXPLANATIONS) {
@@ -26,6 +32,19 @@ export async function explainFitWithAI(
         supplierName: context.supplierName,
         buyerName: context.buyerName,
         corridor: context.corridor,
+        // Enhanced context for richer AI responses
+        status: context.status,
+        failedGates: context.failedGates?.map(g => ({
+          id: g.gateId,
+          label: g.label,
+          reason: g.reason,
+        })),
+        riskPenalties: context.appliedPenalties?.map(p => ({
+          id: p.penaltyId,
+          label: p.label,
+          penalty: p.penalty,
+          reason: p.reason,
+        })),
       },
     });
 

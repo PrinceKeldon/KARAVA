@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, Check, ArrowRight, Building2, Loader2 } from "lucide-react";
+import { Search, Filter, Check, ArrowRight, Building2, Loader2, AlertTriangle, Shield, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useRequestIntro } from "@/hooks/useIntroRequests";
 import { useToast } from "@/hooks/use-toast";
-import { calculateFitScore } from "@/lib/fitEngine";
+import { calculateFitScore, type FitResult, type ScoreBand } from "@/lib/fitEngine";
 import type { Supplier } from "@/types/supabase";
 
 interface DisplaySupplier {
@@ -18,6 +18,14 @@ interface DisplaySupplier {
   certifications: string[];
   capacity: string;
   gaps: string[];
+  // Extended scoring data
+  status: ScoreBand;
+  statusLabel: string;
+  statusColor: string;
+  readinessScore: number;
+  failedGates?: { gateId: string; label: string; reason?: string }[];
+  appliedPenalties?: { penaltyId: string; label: string; penalty: number; reason: string }[];
+  totalPenalty?: number;
 }
 
 const filters = {
@@ -27,19 +35,26 @@ const filters = {
 };
 
 function transformSupplier(supplier: Supplier): DisplaySupplier {
-  const { fitScore, gaps } = calculateFitScore(supplier);
+  const result = calculateFitScore(supplier);
   
   return {
     id: supplier.id,
     name: supplier.company_name,
     location: `${supplier.location_county}, Kenya`,
     products: supplier.product_category.split(', ').filter(Boolean),
-    fitScore,
+    fitScore: result.fitScore,
     certifications: supplier.certifications || [],
     capacity: supplier.production_capacity_monthly 
       ? `${Math.round(supplier.production_capacity_monthly * 12).toLocaleString()} MT/year`
       : 'Not specified',
-    gaps,
+    gaps: result.gaps,
+    status: result.status,
+    statusLabel: result.statusLabel,
+    statusColor: result.statusColor,
+    readinessScore: result.readinessScore,
+    failedGates: result.failedGates,
+    appliedPenalties: result.appliedPenalties,
+    totalPenalty: result.totalPenalty,
   };
 }
 

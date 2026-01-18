@@ -1,73 +1,26 @@
 import { useState } from "react";
+import { useForm, UseFormReturn } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Building2, Users, FileCheck, BarChart3, Shield, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormError } from "@/components/ui/form-error";
 import { useCreateSupplier } from "@/hooks/useSuppliers";
 import { useToast } from "@/hooks/use-toast";
 import { calculateReadinessFromFormData, type FitResult } from "@/lib/fitEngine";
+import { 
+  SupplierOnboardingSchema, 
+  SupplierOnboardingInput, 
+  stepFieldGroups,
+  defaultFormValues 
+} from "@/schemas/supplierOnboarding.schema";
 import type { ProcessingLevel, SupplierInsert } from "@/types/supabase";
 
 interface StepProps {
-  formData: SupplierFormData;
-  setFormData: React.Dispatch<React.SetStateAction<SupplierFormData>>;
+  form: UseFormReturn<SupplierOnboardingInput>;
   onNext: () => void;
   onBack?: () => void;
-}
-
-interface SupplierFormData {
-  // Basic info
-  companyName: string;
-  location: string;
-  yearsOperating: string;
-  roles: string[];
-  
-  // Products
-  products: string[];
-  annualVolume: string;
-  exportCapacity: string;
-  
-  // Original readiness
-  certifications: string[];
-  eudrStatus: string;
-  traceability: string;
-  
-  // Hard gates
-  hasExportLicense: boolean;
-  exportLicenseNumber: string;
-  hasLegalRegistration: boolean;
-  legalRegistrationNumber: string;
-  hasCompanyBankAccount: boolean;
-  foodSafetyCertType: '' | 'BRCGS' | 'IFS' | 'FSSC22000';
-  hasContaminantReport: boolean;
-  hasPhytosanitaryCert: boolean;
-  hasEUCompliantLabels: boolean;
-  
-  // Readiness criteria
-  hasGradeDefinitions: boolean;
-  hasMoistureDefectLimits: boolean;
-  hasPackagingSpecs: boolean;
-  containerCapacity20ft: string;
-  documentedProcessingCapacity: boolean;
-  hasSeasonalityWindow: boolean;
-  hasMultiSeasonPlan: boolean;
-  hasBufferCapacity: boolean;
-  hasCompanyProfile: boolean;
-  hasProcessFlowDoc: boolean;
-  hasRecentLabResults: boolean;
-  hasDocumentStorage: boolean;
-  incotermsDefined: boolean;
-  paymentTermsUnderstood: boolean;
-  hasLotCodingSystem: boolean;
-  hasFarmMapping: boolean;
-  hasRecallProcedure: boolean;
-  
-  // Risk indicators
-  qualityVarianceRisk: '' | 'low' | 'medium' | 'high';
-  capacityVerified: boolean;
-  traceabilityStrength: '' | 'strong' | 'partial' | 'weak';
-  hasLogisticsIssues: boolean;
-  documentationComplete: boolean;
 }
 
 const steps = [
@@ -144,14 +97,16 @@ function RadioOption({
   );
 }
 
-function CompanyInfoStep({ formData, setFormData, onNext }: StepProps) {
+function CompanyInfoStep({ form, onNext }: StepProps) {
+  const { register, watch, setValue, formState: { errors } } = form;
+  const roles = watch('roles');
+
   const toggleRole = (role: string) => {
-    setFormData(prev => ({
-      ...prev,
-      roles: prev.roles.includes(role)
-        ? prev.roles.filter(r => r !== role)
-        : [...prev.roles, role]
-    }));
+    const currentRoles = roles || [];
+    const newRoles = currentRoles.includes(role)
+      ? currentRoles.filter(r => r !== role)
+      : [...currentRoles, role];
+    setValue('roles', newRoles, { shouldValidate: true });
   };
 
   return (
@@ -165,26 +120,25 @@ function CompanyInfoStep({ formData, setFormData, onNext }: StepProps) {
           <label className="block text-sm font-medium text-foreground mb-1.5">Company Name</label>
           <Input 
             placeholder="e.g., Thika Valley Processors Ltd" 
-            value={formData.companyName}
-            onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+            {...register('companyName')}
           />
+          <FormError message={errors.companyName?.message} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Location</label>
             <Input 
               placeholder="City, County" 
-              value={formData.location}
-              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+              {...register('location')}
             />
+            <FormError message={errors.location?.message} />
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Years Operating</label>
             <Input 
               placeholder="e.g., 8" 
               type="number"
-              value={formData.yearsOperating}
-              onChange={(e) => setFormData(prev => ({ ...prev, yearsOperating: e.target.value }))}
+              {...register('yearsOperating')}
             />
           </div>
         </div>
@@ -195,28 +149,31 @@ function CompanyInfoStep({ formData, setFormData, onNext }: StepProps) {
               <ToggleOption
                 key={role}
                 label={role}
-                checked={formData.roles.includes(role)}
+                checked={roles?.includes(role) || false}
                 onChange={() => toggleRole(role)}
               />
             ))}
           </div>
+          <FormError message={errors.roles?.message} />
         </div>
       </div>
-      <Button onClick={onNext} className="w-full" disabled={!formData.companyName || !formData.location}>
+      <Button onClick={onNext} className="w-full">
         Continue <ArrowRight className="w-4 h-4 ml-2" />
       </Button>
     </div>
   );
 }
 
-function ProductsStep({ formData, setFormData, onNext, onBack }: StepProps) {
+function ProductsStep({ form, onNext, onBack }: StepProps) {
+  const { register, watch, setValue, formState: { errors } } = form;
+  const products = watch('products');
+
   const toggleProduct = (product: string) => {
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products.includes(product)
-        ? prev.products.filter(p => p !== product)
-        : [...prev.products, product]
-    }));
+    const currentProducts = products || [];
+    const newProducts = currentProducts.includes(product)
+      ? currentProducts.filter(p => p !== product)
+      : [...currentProducts, product];
+    setValue('products', newProducts, { shouldValidate: true });
   };
 
   return (
@@ -233,11 +190,12 @@ function ProductsStep({ formData, setFormData, onNext, onBack }: StepProps) {
               <ToggleOption
                 key={product}
                 label={product}
-                checked={formData.products.includes(product)}
+                checked={products?.includes(product) || false}
                 onChange={() => toggleProduct(product)}
               />
             ))}
           </div>
+          <FormError message={errors.products?.message} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -245,17 +203,16 @@ function ProductsStep({ formData, setFormData, onNext, onBack }: StepProps) {
             <Input 
               placeholder="e.g., 2500" 
               type="number"
-              value={formData.annualVolume}
-              onChange={(e) => setFormData(prev => ({ ...prev, annualVolume: e.target.value }))}
+              {...register('annualVolume')}
             />
+            <FormError message={errors.annualVolume?.message} />
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Export Capacity (MT)</label>
             <Input 
               placeholder="e.g., 2000" 
               type="number"
-              value={formData.exportCapacity}
-              onChange={(e) => setFormData(prev => ({ ...prev, exportCapacity: e.target.value }))}
+              {...register('exportCapacity')}
             />
           </div>
         </div>
@@ -264,8 +221,7 @@ function ProductsStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <Input 
             placeholder="e.g., 4" 
             type="number"
-            value={formData.containerCapacity20ft}
-            onChange={(e) => setFormData(prev => ({ ...prev, containerCapacity20ft: e.target.value }))}
+            {...register('containerCapacity20ft')}
           />
         </div>
       </div>
@@ -273,7 +229,7 @@ function ProductsStep({ formData, setFormData, onNext, onBack }: StepProps) {
         <Button variant="ghost" onClick={onBack} className="flex-1">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
-        <Button onClick={onNext} className="flex-1" disabled={formData.products.length === 0}>
+        <Button onClick={onNext} className="flex-1">
           Continue <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
@@ -281,7 +237,16 @@ function ProductsStep({ formData, setFormData, onNext, onBack }: StepProps) {
   );
 }
 
-function ComplianceStep({ formData, setFormData, onNext, onBack }: StepProps) {
+function ComplianceStep({ form, onNext, onBack }: StepProps) {
+  const { register, watch, setValue, formState: { errors } } = form;
+  const hasExportLicense = watch('hasExportLicense');
+  const hasLegalRegistration = watch('hasLegalRegistration');
+  const hasCompanyBankAccount = watch('hasCompanyBankAccount');
+  const foodSafetyCertType = watch('foodSafetyCertType');
+  const hasContaminantReport = watch('hasContaminantReport');
+  const hasPhytosanitaryCert = watch('hasPhytosanitaryCert');
+  const hasEUCompliantLabels = watch('hasEUCompliantLabels');
+
   return (
     <div className="space-y-6">
       <div className="mb-6">
@@ -294,15 +259,17 @@ function ComplianceStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <div className="space-y-3">
             <ToggleOption
               label="Have valid Kenyan export license"
-              checked={formData.hasExportLicense}
-              onChange={() => setFormData(prev => ({ ...prev, hasExportLicense: !prev.hasExportLicense }))}
+              checked={hasExportLicense}
+              onChange={() => setValue('hasExportLicense', !hasExportLicense, { shouldValidate: true })}
             />
-            {formData.hasExportLicense && (
-              <Input 
-                placeholder="License number" 
-                value={formData.exportLicenseNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, exportLicenseNumber: e.target.value }))}
-              />
+            {hasExportLicense && (
+              <div>
+                <Input 
+                  placeholder="License number" 
+                  {...register('exportLicenseNumber')}
+                />
+                <FormError message={errors.exportLicenseNumber?.message} type="hard-gate" />
+              </div>
             )}
           </div>
         </div>
@@ -312,20 +279,22 @@ function ComplianceStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <div className="space-y-3">
             <ToggleOption
               label="Registered legal entity"
-              checked={formData.hasLegalRegistration}
-              onChange={() => setFormData(prev => ({ ...prev, hasLegalRegistration: !prev.hasLegalRegistration }))}
+              checked={hasLegalRegistration}
+              onChange={() => setValue('hasLegalRegistration', !hasLegalRegistration, { shouldValidate: true })}
             />
-            {formData.hasLegalRegistration && (
-              <Input 
-                placeholder="Registration number" 
-                value={formData.legalRegistrationNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, legalRegistrationNumber: e.target.value }))}
-              />
+            {hasLegalRegistration && (
+              <div>
+                <Input 
+                  placeholder="Registration number" 
+                  {...register('legalRegistrationNumber')}
+                />
+                <FormError message={errors.legalRegistrationNumber?.message} type="hard-gate" />
+              </div>
             )}
             <ToggleOption
               label="Have company bank account"
-              checked={formData.hasCompanyBankAccount}
-              onChange={() => setFormData(prev => ({ ...prev, hasCompanyBankAccount: !prev.hasCompanyBankAccount }))}
+              checked={hasCompanyBankAccount}
+              onChange={() => setValue('hasCompanyBankAccount', !hasCompanyBankAccount)}
             />
           </div>
         </div>
@@ -342,11 +311,8 @@ function ComplianceStep({ formData, setFormData, onNext, onBack }: StepProps) {
               <RadioOption
                 key={opt.value}
                 label={opt.label}
-                selected={formData.foodSafetyCertType === opt.value}
-                onChange={() => setFormData(prev => ({ 
-                  ...prev, 
-                  foodSafetyCertType: opt.value as '' | 'BRCGS' | 'IFS' | 'FSSC22000'
-                }))}
+                selected={foodSafetyCertType === opt.value}
+                onChange={() => setValue('foodSafetyCertType', opt.value as '' | 'BRCGS' | 'IFS' | 'FSSC22000')}
               />
             ))}
           </div>
@@ -357,18 +323,18 @@ function ComplianceStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <div className="space-y-2">
             <ToggleOption
               label="Have contaminant/pesticide MRL report"
-              checked={formData.hasContaminantReport}
-              onChange={() => setFormData(prev => ({ ...prev, hasContaminantReport: !prev.hasContaminantReport }))}
+              checked={hasContaminantReport}
+              onChange={() => setValue('hasContaminantReport', !hasContaminantReport)}
             />
             <ToggleOption
               label="Have phytosanitary certificate"
-              checked={formData.hasPhytosanitaryCert}
-              onChange={() => setFormData(prev => ({ ...prev, hasPhytosanitaryCert: !prev.hasPhytosanitaryCert }))}
+              checked={hasPhytosanitaryCert}
+              onChange={() => setValue('hasPhytosanitaryCert', !hasPhytosanitaryCert)}
             />
             <ToggleOption
               label="Have EU-compliant labelling"
-              checked={formData.hasEUCompliantLabels}
-              onChange={() => setFormData(prev => ({ ...prev, hasEUCompliantLabels: !prev.hasEUCompliantLabels }))}
+              checked={hasEUCompliantLabels}
+              onChange={() => setValue('hasEUCompliantLabels', !hasEUCompliantLabels)}
             />
           </div>
         </div>
@@ -385,14 +351,34 @@ function ComplianceStep({ formData, setFormData, onNext, onBack }: StepProps) {
   );
 }
 
-function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
+function ReadinessStep({ form, onNext, onBack }: StepProps) {
+  const { watch, setValue } = form;
+  const certifications = watch('certifications');
+  const eudrStatus = watch('eudrStatus');
+  const traceability = watch('traceability');
+  const hasGradeDefinitions = watch('hasGradeDefinitions');
+  const hasMoistureDefectLimits = watch('hasMoistureDefectLimits');
+  const hasPackagingSpecs = watch('hasPackagingSpecs');
+  const hasSeasonalityWindow = watch('hasSeasonalityWindow');
+  const hasMultiSeasonPlan = watch('hasMultiSeasonPlan');
+  const hasBufferCapacity = watch('hasBufferCapacity');
+  const documentedProcessingCapacity = watch('documentedProcessingCapacity');
+  const hasCompanyProfile = watch('hasCompanyProfile');
+  const hasProcessFlowDoc = watch('hasProcessFlowDoc');
+  const hasRecentLabResults = watch('hasRecentLabResults');
+  const hasDocumentStorage = watch('hasDocumentStorage');
+  const incotermsDefined = watch('incotermsDefined');
+  const paymentTermsUnderstood = watch('paymentTermsUnderstood');
+  const hasLotCodingSystem = watch('hasLotCodingSystem');
+  const hasFarmMapping = watch('hasFarmMapping');
+  const hasRecallProcedure = watch('hasRecallProcedure');
+
   const toggleCert = (cert: string) => {
-    setFormData(prev => ({
-      ...prev,
-      certifications: prev.certifications.includes(cert)
-        ? prev.certifications.filter(c => c !== cert)
-        : [...prev.certifications, cert]
-    }));
+    const currentCerts = certifications || [];
+    const newCerts = currentCerts.includes(cert)
+      ? currentCerts.filter(c => c !== cert)
+      : [...currentCerts, cert];
+    setValue('certifications', newCerts);
   };
 
   return (
@@ -409,7 +395,7 @@ function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
               <ToggleOption
                 key={cert}
                 label={cert}
-                checked={formData.certifications.includes(cert)}
+                checked={certifications?.includes(cert) || false}
                 onChange={() => toggleCert(cert)}
                 className="bg-card"
               />
@@ -422,18 +408,18 @@ function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <div className="space-y-2">
             <ToggleOption
               label="Have grade definitions documented"
-              checked={formData.hasGradeDefinitions}
-              onChange={() => setFormData(prev => ({ ...prev, hasGradeDefinitions: !prev.hasGradeDefinitions }))}
+              checked={hasGradeDefinitions}
+              onChange={() => setValue('hasGradeDefinitions', !hasGradeDefinitions)}
             />
             <ToggleOption
               label="Have moisture/defect limits defined"
-              checked={formData.hasMoistureDefectLimits}
-              onChange={() => setFormData(prev => ({ ...prev, hasMoistureDefectLimits: !prev.hasMoistureDefectLimits }))}
+              checked={hasMoistureDefectLimits}
+              onChange={() => setValue('hasMoistureDefectLimits', !hasMoistureDefectLimits)}
             />
             <ToggleOption
               label="Have packaging/shelf-life specs"
-              checked={formData.hasPackagingSpecs}
-              onChange={() => setFormData(prev => ({ ...prev, hasPackagingSpecs: !prev.hasPackagingSpecs }))}
+              checked={hasPackagingSpecs}
+              onChange={() => setValue('hasPackagingSpecs', !hasPackagingSpecs)}
             />
           </div>
         </div>
@@ -443,23 +429,23 @@ function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <div className="space-y-2">
             <ToggleOption
               label="Have seasonality window defined"
-              checked={formData.hasSeasonalityWindow}
-              onChange={() => setFormData(prev => ({ ...prev, hasSeasonalityWindow: !prev.hasSeasonalityWindow }))}
+              checked={hasSeasonalityWindow}
+              onChange={() => setValue('hasSeasonalityWindow', !hasSeasonalityWindow)}
             />
             <ToggleOption
               label="Have multi-season supply plan"
-              checked={formData.hasMultiSeasonPlan}
-              onChange={() => setFormData(prev => ({ ...prev, hasMultiSeasonPlan: !prev.hasMultiSeasonPlan }))}
+              checked={hasMultiSeasonPlan}
+              onChange={() => setValue('hasMultiSeasonPlan', !hasMultiSeasonPlan)}
             />
             <ToggleOption
               label="Have buffer capacity for demand spikes"
-              checked={formData.hasBufferCapacity}
-              onChange={() => setFormData(prev => ({ ...prev, hasBufferCapacity: !prev.hasBufferCapacity }))}
+              checked={hasBufferCapacity}
+              onChange={() => setValue('hasBufferCapacity', !hasBufferCapacity)}
             />
             <ToggleOption
               label="Documented processing capacity"
-              checked={formData.documentedProcessingCapacity}
-              onChange={() => setFormData(prev => ({ ...prev, documentedProcessingCapacity: !prev.documentedProcessingCapacity }))}
+              checked={documentedProcessingCapacity}
+              onChange={() => setValue('documentedProcessingCapacity', !documentedProcessingCapacity)}
             />
           </div>
         </div>
@@ -469,23 +455,23 @@ function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <div className="space-y-2">
             <ToggleOption
               label="Have company profile document"
-              checked={formData.hasCompanyProfile}
-              onChange={() => setFormData(prev => ({ ...prev, hasCompanyProfile: !prev.hasCompanyProfile }))}
+              checked={hasCompanyProfile}
+              onChange={() => setValue('hasCompanyProfile', !hasCompanyProfile)}
             />
             <ToggleOption
               label="Have process flow documentation"
-              checked={formData.hasProcessFlowDoc}
-              onChange={() => setFormData(prev => ({ ...prev, hasProcessFlowDoc: !prev.hasProcessFlowDoc }))}
+              checked={hasProcessFlowDoc}
+              onChange={() => setValue('hasProcessFlowDoc', !hasProcessFlowDoc)}
             />
             <ToggleOption
               label="Have recent lab results"
-              checked={formData.hasRecentLabResults}
-              onChange={() => setFormData(prev => ({ ...prev, hasRecentLabResults: !prev.hasRecentLabResults }))}
+              checked={hasRecentLabResults}
+              onChange={() => setValue('hasRecentLabResults', !hasRecentLabResults)}
             />
             <ToggleOption
               label="Have document storage system"
-              checked={formData.hasDocumentStorage}
-              onChange={() => setFormData(prev => ({ ...prev, hasDocumentStorage: !prev.hasDocumentStorage }))}
+              checked={hasDocumentStorage}
+              onChange={() => setValue('hasDocumentStorage', !hasDocumentStorage)}
             />
           </div>
         </div>
@@ -495,28 +481,28 @@ function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <div className="space-y-2">
             <ToggleOption
               label="Incoterms defined (FOB/CIF etc)"
-              checked={formData.incotermsDefined}
-              onChange={() => setFormData(prev => ({ ...prev, incotermsDefined: !prev.incotermsDefined }))}
+              checked={incotermsDefined}
+              onChange={() => setValue('incotermsDefined', !incotermsDefined)}
             />
             <ToggleOption
               label="Payment terms understood (LC, CAD)"
-              checked={formData.paymentTermsUnderstood}
-              onChange={() => setFormData(prev => ({ ...prev, paymentTermsUnderstood: !prev.paymentTermsUnderstood }))}
+              checked={paymentTermsUnderstood}
+              onChange={() => setValue('paymentTermsUnderstood', !paymentTermsUnderstood)}
             />
             <ToggleOption
               label="Have lot/batch coding system"
-              checked={formData.hasLotCodingSystem}
-              onChange={() => setFormData(prev => ({ ...prev, hasLotCodingSystem: !prev.hasLotCodingSystem }))}
+              checked={hasLotCodingSystem}
+              onChange={() => setValue('hasLotCodingSystem', !hasLotCodingSystem)}
             />
             <ToggleOption
               label="Have farm/cooperative mapping"
-              checked={formData.hasFarmMapping}
-              onChange={() => setFormData(prev => ({ ...prev, hasFarmMapping: !prev.hasFarmMapping }))}
+              checked={hasFarmMapping}
+              onChange={() => setValue('hasFarmMapping', !hasFarmMapping)}
             />
             <ToggleOption
               label="Have recall procedure"
-              checked={formData.hasRecallProcedure}
-              onChange={() => setFormData(prev => ({ ...prev, hasRecallProcedure: !prev.hasRecallProcedure }))}
+              checked={hasRecallProcedure}
+              onChange={() => setValue('hasRecallProcedure', !hasRecallProcedure)}
             />
           </div>
         </div>
@@ -528,8 +514,8 @@ function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
               <RadioOption
                 key={opt}
                 label={opt}
-                selected={formData.eudrStatus === opt}
-                onChange={() => setFormData(prev => ({ ...prev, eudrStatus: opt }))}
+                selected={eudrStatus === opt}
+                onChange={() => setValue('eudrStatus', opt)}
               />
             ))}
           </div>
@@ -542,8 +528,8 @@ function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
               <RadioOption
                 key={opt}
                 label={opt}
-                selected={formData.traceability === opt}
-                onChange={() => setFormData(prev => ({ ...prev, traceability: opt }))}
+                selected={traceability === opt}
+                onChange={() => setValue('traceability', opt)}
               />
             ))}
           </div>
@@ -561,7 +547,14 @@ function ReadinessStep({ formData, setFormData, onNext, onBack }: StepProps) {
   );
 }
 
-function RiskStep({ formData, setFormData, onNext, onBack }: StepProps) {
+function RiskStep({ form, onNext, onBack }: StepProps) {
+  const { watch, setValue } = form;
+  const qualityVarianceRisk = watch('qualityVarianceRisk');
+  const traceabilityStrength = watch('traceabilityStrength');
+  const capacityVerified = watch('capacityVerified');
+  const documentationComplete = watch('documentationComplete');
+  const hasLogisticsIssues = watch('hasLogisticsIssues');
+
   return (
     <div className="space-y-6">
       <div className="mb-6">
@@ -580,11 +573,8 @@ function RiskStep({ formData, setFormData, onNext, onBack }: StepProps) {
               <RadioOption
                 key={opt.value}
                 label={opt.label}
-                selected={formData.qualityVarianceRisk === opt.value}
-                onChange={() => setFormData(prev => ({ 
-                  ...prev, 
-                  qualityVarianceRisk: opt.value as 'low' | 'medium' | 'high'
-                }))}
+                selected={qualityVarianceRisk === opt.value}
+                onChange={() => setValue('qualityVarianceRisk', opt.value as 'low' | 'medium' | 'high')}
               />
             ))}
           </div>
@@ -601,11 +591,8 @@ function RiskStep({ formData, setFormData, onNext, onBack }: StepProps) {
               <RadioOption
                 key={opt.value}
                 label={opt.label}
-                selected={formData.traceabilityStrength === opt.value}
-                onChange={() => setFormData(prev => ({ 
-                  ...prev, 
-                  traceabilityStrength: opt.value as 'strong' | 'partial' | 'weak'
-                }))}
+                selected={traceabilityStrength === opt.value}
+                onChange={() => setValue('traceabilityStrength', opt.value as 'strong' | 'partial' | 'weak')}
               />
             ))}
           </div>
@@ -616,18 +603,18 @@ function RiskStep({ formData, setFormData, onNext, onBack }: StepProps) {
           <div className="space-y-2">
             <ToggleOption
               label="Capacity has been verified/audited"
-              checked={formData.capacityVerified}
-              onChange={() => setFormData(prev => ({ ...prev, capacityVerified: !prev.capacityVerified }))}
+              checked={capacityVerified}
+              onChange={() => setValue('capacityVerified', !capacityVerified)}
             />
             <ToggleOption
               label="Documentation is complete"
-              checked={formData.documentationComplete}
-              onChange={() => setFormData(prev => ({ ...prev, documentationComplete: !prev.documentationComplete }))}
+              checked={documentationComplete}
+              onChange={() => setValue('documentationComplete', !documentationComplete)}
             />
             <ToggleOption
               label="Have experienced logistics issues"
-              checked={formData.hasLogisticsIssues}
-              onChange={() => setFormData(prev => ({ ...prev, hasLogisticsIssues: !prev.hasLogisticsIssues }))}
+              checked={hasLogisticsIssues}
+              onChange={() => setValue('hasLogisticsIssues', !hasLogisticsIssues)}
             />
           </div>
         </div>
@@ -644,13 +631,15 @@ function RiskStep({ formData, setFormData, onNext, onBack }: StepProps) {
   );
 }
 
-function AssessmentPreviewStep({ formData, assessment, onBack, onSubmit, isLoading }: { 
-  formData: SupplierFormData;
+function AssessmentPreviewStep({ form, assessment, onBack, onSubmit, isLoading }: { 
+  form: UseFormReturn<SupplierOnboardingInput>;
   assessment: FitResult;
   onBack: () => void;
   onSubmit: () => void;
   isLoading: boolean;
 }) {
+  const formData = form.getValues();
+  
   const positives = [
     formData.products.length > 0 && "Product types match buyer demand",
     parseInt(formData.annualVolume) >= 100 && "Volume meets minimum thresholds",
@@ -718,118 +707,94 @@ function AssessmentPreviewStep({ formData, assessment, onBack, onSubmit, isLoadi
 
 export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState<SupplierFormData>({
-    // Basic info
-    companyName: '',
-    location: '',
-    yearsOperating: '',
-    roles: [],
-    
-    // Products
-    products: [],
-    annualVolume: '',
-    exportCapacity: '',
-    
-    // Original readiness
-    certifications: [],
-    eudrStatus: '',
-    traceability: '',
-    
-    // Hard gates
-    hasExportLicense: false,
-    exportLicenseNumber: '',
-    hasLegalRegistration: false,
-    legalRegistrationNumber: '',
-    hasCompanyBankAccount: false,
-    foodSafetyCertType: '',
-    hasContaminantReport: false,
-    hasPhytosanitaryCert: false,
-    hasEUCompliantLabels: false,
-    
-    // Readiness criteria
-    hasGradeDefinitions: false,
-    hasMoistureDefectLimits: false,
-    hasPackagingSpecs: false,
-    containerCapacity20ft: '',
-    documentedProcessingCapacity: false,
-    hasSeasonalityWindow: false,
-    hasMultiSeasonPlan: false,
-    hasBufferCapacity: false,
-    hasCompanyProfile: false,
-    hasProcessFlowDoc: false,
-    hasRecentLabResults: false,
-    hasDocumentStorage: false,
-    incotermsDefined: false,
-    paymentTermsUnderstood: false,
-    hasLotCodingSystem: false,
-    hasFarmMapping: false,
-    hasRecallProcedure: false,
-    
-    // Risk indicators
-    qualityVarianceRisk: '',
-    capacityVerified: false,
-    traceabilityStrength: '',
-    hasLogisticsIssues: false,
-    documentationComplete: false,
+  
+  const form = useForm<SupplierOnboardingInput>({
+    resolver: zodResolver(SupplierOnboardingSchema),
+    mode: "onBlur",
+    defaultValues: defaultFormValues,
   });
   
   const createSupplier = useCreateSupplier();
   const { toast } = useToast();
   
+  const formData = form.watch();
+  
   const assessment = calculateReadinessFromFormData({
-    certifications: formData.certifications.filter(c => c !== 'None'),
-    eudrStatus: formData.eudrStatus,
-    traceability: formData.traceability,
-    exportCapacity: parseFloat(formData.exportCapacity) || 0,
-    annualVolume: parseFloat(formData.annualVolume) || 0,
+    certifications: formData.certifications?.filter(c => c !== 'None') || [],
+    eudrStatus: formData.eudrStatus || '',
+    traceability: formData.traceability || '',
+    exportCapacity: parseFloat(formData.exportCapacity || '0') || 0,
+    annualVolume: parseFloat(formData.annualVolume || '0') || 0,
   });
+
+  // Per-step validation before navigation
+  const validateAndNext = async () => {
+    const fieldsToValidate = stepFieldGroups[step];
+    if (fieldsToValidate) {
+      const isValid = await form.trigger(fieldsToValidate);
+      if (!isValid) return;
+    }
+    setStep(prev => prev + 1);
+  };
   
   const handleSubmit = async () => {
+    // Final validation
+    const isValid = await form.trigger();
+    if (!isValid) {
+      toast({
+        title: "Validation Error",
+        description: "Please check the form for errors before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
+      const data = form.getValues();
       const supplierData: SupplierInsert = {
-        company_name: formData.companyName,
+        company_name: data.companyName,
         contact_name: null,
-        location_county: formData.location,
-        product_category: formData.products.join(', '),
-        production_capacity_monthly: formData.annualVolume ? parseFloat(formData.annualVolume) / 12 : null,
-        processing_level: roleToProcessingLevel(formData.roles),
-        certifications: formData.certifications.filter(c => c !== 'None'),
-        export_experience: formData.roles.includes('Exporter') || parseFloat(formData.exportCapacity) > 0,
+        location_county: data.location,
+        product_category: data.products.join(', '),
+        production_capacity_monthly: data.annualVolume ? parseFloat(data.annualVolume) / 12 : null,
+        processing_level: roleToProcessingLevel(data.roles),
+        certifications: data.certifications.filter(c => c !== 'None'),
+        export_experience: data.roles.includes('Exporter') || parseFloat(data.exportCapacity || '0') > 0,
         
         // Hard gate fields
-        export_license_number: formData.exportLicenseNumber || null,
-        legal_registration_number: formData.legalRegistrationNumber || null,
-        has_company_bank_account: formData.hasCompanyBankAccount || null,
-        food_safety_cert_type: formData.foodSafetyCertType || null,
-        has_contaminant_report: formData.hasContaminantReport || null,
-        has_phytosanitary_cert: formData.hasPhytosanitaryCert || null,
-        has_eu_compliant_labels: formData.hasEUCompliantLabels || null,
+        export_license_number: data.exportLicenseNumber || null,
+        legal_registration_number: data.legalRegistrationNumber || null,
+        has_company_bank_account: data.hasCompanyBankAccount || null,
+        food_safety_cert_type: data.foodSafetyCertType || null,
+        has_contaminant_report: data.hasContaminantReport || null,
+        has_phytosanitary_cert: data.hasPhytosanitaryCert || null,
+        has_eu_compliant_labels: data.hasEUCompliantLabels || null,
         
         // Readiness fields
-        has_grade_definitions: formData.hasGradeDefinitions || null,
-        has_moisture_defect_limits: formData.hasMoistureDefectLimits || null,
-        has_packaging_specs: formData.hasPackagingSpecs || null,
-        container_capacity_20ft: formData.containerCapacity20ft ? parseInt(formData.containerCapacity20ft) : null,
-        documented_processing_capacity: formData.documentedProcessingCapacity || null,
-        has_seasonality_window: formData.hasSeasonalityWindow || null,
-        has_multi_season_plan: formData.hasMultiSeasonPlan || null,
-        has_buffer_capacity: formData.hasBufferCapacity || null,
-        has_company_profile: formData.hasCompanyProfile || null,
-        has_process_flow_doc: formData.hasProcessFlowDoc || null,
-        has_recent_lab_results: formData.hasRecentLabResults || null,
-        has_document_storage: formData.hasDocumentStorage || null,
-        incoterms_defined: formData.incotermsDefined || null,
-        payment_terms_understood: formData.paymentTermsUnderstood || null,
-        has_lot_coding_system: formData.hasLotCodingSystem || null,
-        has_farm_mapping: formData.hasFarmMapping || null,
-        has_recall_procedure: formData.hasRecallProcedure || null,
+        has_grade_definitions: data.hasGradeDefinitions || null,
+        has_moisture_defect_limits: data.hasMoistureDefectLimits || null,
+        has_packaging_specs: data.hasPackagingSpecs || null,
+        container_capacity_20ft: data.containerCapacity20ft ? parseInt(data.containerCapacity20ft) : null,
+        documented_processing_capacity: data.documentedProcessingCapacity || null,
+        has_seasonality_window: data.hasSeasonalityWindow || null,
+        has_multi_season_plan: data.hasMultiSeasonPlan || null,
+        has_buffer_capacity: data.hasBufferCapacity || null,
+        has_company_profile: data.hasCompanyProfile || null,
+        has_process_flow_doc: data.hasProcessFlowDoc || null,
+        has_recent_lab_results: data.hasRecentLabResults || null,
+        has_document_storage: data.hasDocumentStorage || null,
+        incoterms_defined: data.incotermsDefined || null,
+        payment_terms_understood: data.paymentTermsUnderstood || null,
+        has_lot_coding_system: data.hasLotCodingSystem || null,
+        has_farm_mapping: data.hasFarmMapping || null,
+        has_recall_procedure: data.hasRecallProcedure || null,
         
         // Risk indicators
-        quality_variance_risk: formData.qualityVarianceRisk || null,
-        capacity_verified: formData.capacityVerified || null,
-        traceability_strength: formData.traceabilityStrength || null,
-        has_logistics_issues: formData.hasLogisticsIssues || null,
-        documentation_complete: formData.documentationComplete || null,
+        quality_variance_risk: data.qualityVarianceRisk || null,
+        capacity_verified: data.capacityVerified || null,
+        traceability_strength: data.traceabilityStrength || null,
+        has_logistics_issues: data.hasLogisticsIssues || null,
+        documentation_complete: data.documentationComplete || null,
       };
       
       await createSupplier.mutateAsync(supplierData);
@@ -895,46 +860,41 @@ export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
         >
           {step === 1 && (
             <CompanyInfoStep 
-              formData={formData} 
-              setFormData={setFormData} 
-              onNext={() => setStep(2)} 
+              form={form}
+              onNext={validateAndNext}
             />
           )}
           {step === 2 && (
             <ProductsStep 
-              formData={formData} 
-              setFormData={setFormData} 
-              onNext={() => setStep(3)} 
-              onBack={() => setStep(1)} 
+              form={form}
+              onNext={validateAndNext}
+              onBack={() => setStep(1)}
             />
           )}
           {step === 3 && (
             <ComplianceStep 
-              formData={formData} 
-              setFormData={setFormData} 
-              onNext={() => setStep(4)} 
-              onBack={() => setStep(2)} 
+              form={form}
+              onNext={validateAndNext}
+              onBack={() => setStep(2)}
             />
           )}
           {step === 4 && (
             <ReadinessStep 
-              formData={formData} 
-              setFormData={setFormData} 
-              onNext={() => setStep(5)} 
-              onBack={() => setStep(3)} 
+              form={form}
+              onNext={validateAndNext}
+              onBack={() => setStep(3)}
             />
           )}
           {step === 5 && (
             <RiskStep 
-              formData={formData} 
-              setFormData={setFormData} 
-              onNext={() => setStep(6)} 
-              onBack={() => setStep(4)} 
+              form={form}
+              onNext={validateAndNext}
+              onBack={() => setStep(4)}
             />
           )}
           {step === 6 && (
             <AssessmentPreviewStep 
-              formData={formData}
+              form={form}
               assessment={assessment}
               onBack={() => setStep(5)}
               onSubmit={handleSubmit}

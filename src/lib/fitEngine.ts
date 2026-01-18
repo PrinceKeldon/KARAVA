@@ -118,17 +118,23 @@ export function calculateFitScore(
  * Used during the supplier onboarding flow
  */
 export function calculateReadinessFromFormData(formData: {
-  certifications: string[];
-  eudrStatus: string;
-  traceability: string;
-  exportCapacity: number;
-  annualVolume: number;
+  certifications?: string[];
+  eudrStatus?: string;
+  traceability?: string;
+  exportCapacity?: string;
+  annualVolume?: string;
 }): FitResult {
   let readinessScore = 50; // Start at midpoint
   const gaps: string[] = [];
+  
+  const certifications = formData.certifications || [];
+  const eudrStatus = formData.eudrStatus || '';
+  const traceability = formData.traceability || '';
+  const exportCapacity = parseFloat(formData.exportCapacity || '0') || 0;
+  const annualVolume = parseFloat(formData.annualVolume || '0') || 0;
 
   // EU Food Safety Certification check
-  const hasEUFoodSafety = formData.certifications.some(c => 
+  const hasEUFoodSafety = certifications.some(c => 
     ['BRCGS', 'IFS', 'FSSC 22000', 'FSSC22000'].includes(c)
   );
   if (!hasEUFoodSafety) {
@@ -137,47 +143,47 @@ export function calculateReadinessFromFormData(formData: {
   }
 
   // HACCP baseline
-  if (!formData.certifications.includes('HACCP')) {
+  if (!certifications.includes('HACCP')) {
     readinessScore -= 10;
     gaps.push('Missing HACCP certification');
   }
 
   // EUDR status
-  if (formData.eudrStatus === 'Not started') {
+  if (eudrStatus === 'Not started') {
     readinessScore -= 20;
     gaps.push('EUDR documentation not started');
-  } else if (formData.eudrStatus === 'In progress') {
+  } else if (eudrStatus === 'In progress') {
     readinessScore -= 10;
     gaps.push('EUDR documentation in progress');
-  } else if (formData.eudrStatus === 'Unsure') {
+  } else if (eudrStatus === 'Unsure') {
     readinessScore -= 15;
     gaps.push('EUDR compliance status unknown');
-  } else if (formData.eudrStatus === 'Complete') {
+  } else if (eudrStatus === 'Complete') {
     readinessScore += 10;
   }
 
   // Traceability
-  if (formData.traceability === 'None') {
+  if (traceability === 'None') {
     readinessScore -= 15;
     gaps.push('No traceability to farm level');
-  } else if (formData.traceability === 'Partial') {
+  } else if (traceability === 'Partial') {
     readinessScore -= 8;
     gaps.push('Partial traceability – full farm-level tracing recommended');
-  } else if (formData.traceability === 'Full') {
+  } else if (traceability === 'Full') {
     readinessScore += 10;
   }
 
   // Export orientation bonus
-  if (formData.exportCapacity > 0 && formData.annualVolume > 0) {
-    const exportRatio = formData.exportCapacity / formData.annualVolume;
+  if (exportCapacity > 0 && annualVolume > 0) {
+    const exportRatio = exportCapacity / annualVolume;
     if (exportRatio >= 0.5) {
       readinessScore += 5;
     }
   }
 
   // Certification bonuses
-  if (formData.certifications.includes('Organic')) readinessScore += 5;
-  if (formData.certifications.includes('Fair Trade')) readinessScore += 3;
+  if (certifications.includes('Organic')) readinessScore += 5;
+  if (certifications.includes('Fair Trade')) readinessScore += 3;
 
   const finalScore = Math.max(0, Math.min(100, readinessScore));
   const status: ScoreBand = 

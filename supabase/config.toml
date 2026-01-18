@@ -7,3 +7,6 @@ max_rows = 1000
 
 [functions.explain-fit]
 verify_jwt = false
+
+[functions.validate-supplier]
+verify_jwt = false

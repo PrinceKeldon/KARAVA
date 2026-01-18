@@ -6,16 +6,16 @@ import { ArrowLeft, ArrowRight, Check, Building2, Users, FileCheck, BarChart3, S
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormError } from "@/components/ui/form-error";
-import { useCreateSupplier } from "@/hooks/useSuppliers";
 import { useToast } from "@/hooks/use-toast";
 import { calculateReadinessFromFormData, type FitResult } from "@/lib/fitEngine";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   SupplierOnboardingSchema, 
   SupplierOnboardingInput, 
   stepFieldGroups,
   defaultFormValues 
 } from "@/schemas/supplierOnboarding.schema";
-import type { ProcessingLevel, SupplierInsert } from "@/types/supabase";
+import type { ProcessingLevel } from "@/types/supabase";
 
 interface StepProps {
   form: UseFormReturn<SupplierOnboardingInput>;
@@ -707,6 +707,7 @@ function AssessmentPreviewStep({ form, assessment, onBack, onSubmit, isLoading }
 
 export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
+  const { toast } = useToast();
   
   const form = useForm<SupplierOnboardingInput>({
     resolver: zodResolver(SupplierOnboardingSchema),
@@ -714,19 +715,10 @@ export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
     defaultValues: defaultFormValues,
   });
   
-  const createSupplier = useCreateSupplier();
-  const { toast } = useToast();
-  
+  // Calculate assessment based on current form data
   const formData = form.watch();
+  const assessment = calculateReadinessFromFormData(formData);
   
-  const assessment = calculateReadinessFromFormData({
-    certifications: formData.certifications?.filter(c => c !== 'None') || [],
-    eudrStatus: formData.eudrStatus || '',
-    traceability: formData.traceability || '',
-    exportCapacity: parseFloat(formData.exportCapacity || '0') || 0,
-    annualVolume: parseFloat(formData.annualVolume || '0') || 0,
-  });
-
   // Per-step validation before navigation
   const validateAndNext = async () => {
     const fieldsToValidate = stepFieldGroups[step];
@@ -734,83 +726,106 @@ export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
       const isValid = await form.trigger(fieldsToValidate);
       if (!isValid) return;
     }
-    setStep(prev => prev + 1);
+    setStep(step + 1);
   };
   
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async () => {
-    // Final validation
     const isValid = await form.trigger();
     if (!isValid) {
       toast({
         title: "Validation Error",
-        description: "Please check the form for errors before submitting.",
+        description: "Please review the form and correct any errors.",
         variant: "destructive",
       });
       return;
     }
     
+    setIsSubmitting(true);
+    
     try {
       const data = form.getValues();
-      const supplierData: SupplierInsert = {
+      
+      // Map form data to server format
+      const supplierData = {
         company_name: data.companyName,
-        contact_name: null,
-        location_county: data.location,
-        product_category: data.products.join(', '),
-        production_capacity_monthly: data.annualVolume ? parseFloat(data.annualVolume) / 12 : null,
-        processing_level: roleToProcessingLevel(data.roles),
+        location: data.location,
+        roles: data.roles,
+        products: data.products,
+        annual_volume: data.annualVolume || undefined,
+        export_capacity: data.exportCapacity || undefined,
+        container_capacity_20ft: data.containerCapacity20ft || undefined,
         certifications: data.certifications.filter(c => c !== 'None'),
-        export_experience: data.roles.includes('Exporter') || parseFloat(data.exportCapacity || '0') > 0,
-        
-        // Hard gate fields
-        export_license_number: data.exportLicenseNumber || null,
-        legal_registration_number: data.legalRegistrationNumber || null,
-        has_company_bank_account: data.hasCompanyBankAccount || null,
-        food_safety_cert_type: data.foodSafetyCertType || null,
-        has_contaminant_report: data.hasContaminantReport || null,
-        has_phytosanitary_cert: data.hasPhytosanitaryCert || null,
-        has_eu_compliant_labels: data.hasEUCompliantLabels || null,
-        
-        // Readiness fields
-        has_grade_definitions: data.hasGradeDefinitions || null,
-        has_moisture_defect_limits: data.hasMoistureDefectLimits || null,
-        has_packaging_specs: data.hasPackagingSpecs || null,
-        container_capacity_20ft: data.containerCapacity20ft ? parseInt(data.containerCapacity20ft) : null,
-        documented_processing_capacity: data.documentedProcessingCapacity || null,
-        has_seasonality_window: data.hasSeasonalityWindow || null,
-        has_multi_season_plan: data.hasMultiSeasonPlan || null,
-        has_buffer_capacity: data.hasBufferCapacity || null,
-        has_company_profile: data.hasCompanyProfile || null,
-        has_process_flow_doc: data.hasProcessFlowDoc || null,
-        has_recent_lab_results: data.hasRecentLabResults || null,
-        has_document_storage: data.hasDocumentStorage || null,
-        incoterms_defined: data.incotermsDefined || null,
-        payment_terms_understood: data.paymentTermsUnderstood || null,
-        has_lot_coding_system: data.hasLotCodingSystem || null,
-        has_farm_mapping: data.hasFarmMapping || null,
-        has_recall_procedure: data.hasRecallProcedure || null,
-        
-        // Risk indicators
-        quality_variance_risk: data.qualityVarianceRisk || null,
-        capacity_verified: data.capacityVerified || null,
-        traceability_strength: data.traceabilityStrength || null,
-        has_logistics_issues: data.hasLogisticsIssues || null,
-        documentation_complete: data.documentationComplete || null,
+        eudr_status: data.eudrStatus || undefined,
+        traceability: data.traceability || undefined,
+        has_export_license: data.hasExportLicense,
+        export_license_number: data.exportLicenseNumber || undefined,
+        has_legal_registration: data.hasLegalRegistration,
+        legal_registration_number: data.legalRegistrationNumber || undefined,
+        has_company_bank_account: data.hasCompanyBankAccount,
+        food_safety_cert_type: data.foodSafetyCertType || undefined,
+        has_contaminant_report: data.hasContaminantReport,
+        has_phytosanitary_cert: data.hasPhytosanitaryCert,
+        has_eu_compliant_labels: data.hasEUCompliantLabels,
+        has_grade_definitions: data.hasGradeDefinitions,
+        has_moisture_defect_limits: data.hasMoistureDefectLimits,
+        has_packaging_specs: data.hasPackagingSpecs,
+        documented_processing_capacity: data.documentedProcessingCapacity,
+        has_seasonality_window: data.hasSeasonalityWindow,
+        has_multi_season_plan: data.hasMultiSeasonPlan,
+        has_buffer_capacity: data.hasBufferCapacity,
+        has_company_profile: data.hasCompanyProfile,
+        has_process_flow_doc: data.hasProcessFlowDoc,
+        has_recent_lab_results: data.hasRecentLabResults,
+        has_document_storage: data.hasDocumentStorage,
+        incoterms_defined: data.incotermsDefined,
+        payment_terms_understood: data.paymentTermsUnderstood,
+        has_lot_coding_system: data.hasLotCodingSystem,
+        has_farm_mapping: data.hasFarmMapping,
+        has_recall_procedure: data.hasRecallProcedure,
+        quality_variance_risk: data.qualityVarianceRisk || undefined,
+        capacity_verified: data.capacityVerified,
+        traceability_strength: data.traceabilityStrength || undefined,
+        has_logistics_issues: data.hasLogisticsIssues,
+        documentation_complete: data.documentationComplete,
       };
       
-      await createSupplier.mutateAsync(supplierData);
+      // Call server-side validation edge function
+      const { data: result, error } = await supabase.functions.invoke('validate-supplier', {
+        body: supplierData
+      });
+      
+      if (error) {
+        throw new Error(error.message || 'Server validation failed');
+      }
+      
+      if (!result.valid) {
+        // Display server-side validation errors
+        const errorMessages = result.errors?.map((e: { message: string }) => e.message).join(', ') || 'Validation failed';
+        toast({
+          title: "Validation Failed",
+          description: errorMessages,
+          variant: "destructive",
+        });
+        return;
+      }
       
       toast({
         title: "Profile Created",
-        description: "Your supplier profile has been saved successfully.",
+        description: "Your supplier profile has been validated and saved successfully.",
       });
       
       onClose();
     } catch (error) {
+      console.error('Submit error:', error);
       toast({
         title: "Error",
-        description: "Failed to create profile. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create profile. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -898,7 +913,7 @@ export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
               assessment={assessment}
               onBack={() => setStep(5)}
               onSubmit={handleSubmit}
-              isLoading={createSupplier.isPending}
+              isLoading={isSubmitting}
             />
           )}
         </motion.div>

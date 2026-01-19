@@ -1,0 +1,286 @@
+## Safely Wiring AI Explanations Into the UI
+
+*(Feature-Flagged · Read-Only · Non-Blocking)*
+
+---
+
+## Core Principle (Non-Negotiable)
+
+> **The UI renders the score first.
+> AI explanations are optional, secondary, and never authoritative.**
+
+If AI fails, times out, or is disabled:
+
+* The score **still renders**
+* The UI **still works**
+* No logic breaks
+
+---
+
+## 1️⃣ Where AI Lives in the UI Architecture
+
+### Correct flow (must follow this order):
+
+```
+Validated Form Data
+   ↓
+Scoring Engine (pure TypeScript)
+   ↓
+Scorecard UI (always rendered)
+   ↓
+AI Explanation (optional, async, collapsible)
+```
+
+### ❌ What AI must NOT touch
+
+* Form state
+* Scoring logic
+* Status labels
+* Hard gate outcomes
+* Readiness classification
+
+AI only **reads** the final score result.
+
+---
+
+## 2️⃣ Feature Flag Wiring (Frontend)
+
+### Step 1: Define the flag
+
+**Location**
+
+```
+src/config/features.ts
+```
+
+```ts
+export const FEATURES = {
+  AI_EXPLANATIONS_ENABLED: false
+};
+```
+
+Later this can be:
+
+* Supabase-driven
+* Env-driven
+* Role-based
+
+For now: static + safe.
+
+---
+
+### Step 2: Gate the AI UI
+
+In the **Scorecard component**:
+
+```tsx
+import { FEATURES } from "@/config/features";
+
+{FEATURES.AI_EXPLANATIONS_ENABLED && (
+  <AIExplanationPanel scoreResult={scoreResult} />
+)}
+```
+
+If flag = `false`:
+
+* The component is not mounted
+* No API calls
+* No cost
+* No risk
+
+---
+
+## 3️⃣ AIExplanationPanel (UI Component)
+
+### Responsibilities (very limited)
+
+This component:
+
+* Receives `scoreResult`
+* Calls AI asynchronously
+* Displays explanation text
+* Never mutates data
+
+### Props contract
+
+```ts
+type AIExplanationPanelProps = {
+  scoreResult: SupplierScoreResult;
+};
+```
+
+**Never pass raw form data.**
+
+---
+
+## 4️⃣ Safe Async Behavior (Critical)
+
+### UI state model
+
+```ts
+type AIState =
+  | "idle"
+  | "loading"
+  | "success"
+  | "error";
+```
+
+### UX rules
+
+* AI explanation is **collapsed by default**
+* User must explicitly click “Why this score?”
+* Loading state is subtle
+* Errors are silent and non-blocking
+
+---
+
+### Example interaction flow
+
+1. User sees scorecard
+2. User clicks “Why this score?”
+3. Spinner appears
+4. AI explanation loads OR quietly fails
+
+---
+
+## 5️⃣ Visual Design Guidelines (B2B Safe)
+
+### Placement
+
+AI explanation should:
+
+* Sit **below** the deterministic score
+* Never replace numeric data
+* Never be styled as “authoritative”
+
+### Recommended container style
+
+* Muted background
+* Neutral border
+* Smaller font than score
+* No icons that imply certainty
+
+---
+
+### Example copy framing
+
+**Button / Link**
+
+> “Why this score?”
+
+**Section label**
+
+> “Explanation (informational)”
+
+This subtly signals:
+
+> *Helpful, not decisive*
+
+---
+
+## 6️⃣ AI Output Rendering Rules
+
+### Allowed content
+
+* Plain paragraphs
+* Bullet points
+* Factual language
+
+### Forbidden content
+
+* Emojis
+* Urgency (“act now”, “quick win”)
+* Guarantees
+* Predictive claims
+
+---
+
+### Rendering example (React)
+
+```tsx
+{state === "success" && (
+  <div className="rounded-md bg-muted p-4 text-sm leading-relaxed">
+    {explanation}
+  </div>
+)}
+```
+
+---
+
+## 7️⃣ Error Handling (Silent & Safe)
+
+If AI fails:
+
+* Do NOT show red error states
+* Do NOT log to UI
+* Optionally show:
+
+> “Explanation temporarily unavailable.”
+
+Or simply hide the section.
+
+The scorecard must feel **rock-solid regardless of AI**.
+
+---
+
+## 8️⃣ Backend Contract (Very Important)
+
+The frontend should call **one endpoint only**:
+
+```
+POST /ai/explain-score
+```
+
+Payload:
+
+```json
+{
+  "scoreResult": { ... }
+}
+```
+
+Response:
+
+```json
+{
+  "explanation": "..."
+}
+```
+
+If backend fails → frontend ignores AI gracefully.
+
+---
+
+## 9️⃣ Trust & Compliance Safeguards
+
+Lovable must ensure:
+
+* AI output is never cached as truth
+* AI explanations are not searchable/filterable
+* Buyers cannot sort/filter by AI text
+* AI explanations cannot override “Blocked” states
+
+This keeps KARAVA defensible.
+
+---
+
+## 10️⃣ QA Checklist (Must Pass)
+
+Before enabling AI in production:
+
+* ⬜ Scorecard renders with AI disabled
+* ⬜ Scorecard renders with AI enabled
+* ⬜ AI failure does not affect UI
+* ⬜ Hard gate failures are unchanged
+* ⬜ AI language is neutral and factual
+* ⬜ No optimistic wording appears
+* ⬜ No AI mention of “model”, “confidence”, “prediction”
+
+---
+
+## Mental Model for Lovable (One Line)
+
+> **Scoring is law.
+> AI is commentary.**
+
+---

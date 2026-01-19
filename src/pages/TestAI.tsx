@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Sparkles, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Sparkles, AlertCircle, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { resolveFitAnalysis } from "@/lib/fitResolver";
 import { FEATURES, hydrateFeaturesFromDB } from "@/lib/features";
+import { AIExplanationPanel } from "@/components/AIExplanationPanel";
+import { getStatusColor, getStatusLabel } from "@/lib/fitEngine";
 import type { Supplier, Buyer } from "@/types/supabase";
+import type { FitResult } from "@/lib/fitEngine";
 
 // Test data with gaps to trigger AI explanation
 const testSupplier: Supplier = {
@@ -35,13 +39,13 @@ const testBuyer: Buyer = {
   created_at: new Date().toISOString(),
 };
 
+interface AnalysisResult extends FitResult {
+  explanation: string;
+  explanationSource: string;
+}
+
 export default function TestAI() {
-  const [result, setResult] = useState<{
-    score: number;
-    gaps: string[];
-    explanation: string;
-    explanationSource: string;
-  } | null>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiEnabled, setAiEnabled] = useState(FEATURES.AI_EXPLANATIONS);
@@ -70,11 +74,11 @@ export default function TestAI() {
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-foreground">AI Integration Test</h1>
           <p className="text-muted-foreground">
-            Test the OpenAI-powered fit explanation feature
+            Test the AI-powered fit explanation feature (Lovable AI Gateway)
           </p>
         </div>
 
@@ -174,12 +178,16 @@ export default function TestAI() {
                 Analysis Result
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Score and Status */}
               <div className="flex items-center gap-4">
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-primary">{result.score}%</p>
+                  <p className="text-3xl font-bold text-primary">{result.fitScore}%</p>
                   <p className="text-xs text-muted-foreground">Fit Score</p>
                 </div>
+                <Badge className={getStatusColor(result.status)}>
+                  {getStatusLabel(result.status)}
+                </Badge>
                 <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                   result.explanationSource === "ai" 
                     ? "bg-primary/10 text-primary" 
@@ -189,9 +197,59 @@ export default function TestAI() {
                 </div>
               </div>
 
+              {/* Hard Gates */}
+              {result.failedGates && result.failedGates.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-destructive" />
+                    Failed Hard Gates
+                  </p>
+                  <ul className="space-y-1 pl-6">
+                    {result.failedGates.map((gate, i) => (
+                      <li key={i} className="text-sm text-destructive">
+                        {gate.label}: {gate.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Readiness Breakdown */}
+              {result.readinessBreakdown && result.readinessBreakdown.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Readiness Breakdown</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {result.readinessBreakdown.map((cat, i) => (
+                      <div key={i} className="flex justify-between text-sm p-2 bg-muted/30 rounded">
+                        <span className="text-muted-foreground">{cat.category}</span>
+                        <span className="font-medium">{cat.earnedPoints}/{cat.maxPoints}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Risk Penalties */}
+              {result.appliedPenalties && result.appliedPenalties.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    Applied Risk Penalties
+                  </p>
+                  <ul className="space-y-1 pl-6">
+                    {result.appliedPenalties.map((penalty, i) => (
+                      <li key={i} className="text-sm text-amber-600">
+                        {penalty.label}: -{penalty.penalty} pts ({penalty.reason})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Gaps */}
               {result.gaps.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">Identified Gaps:</p>
+                  <p className="text-sm font-medium text-foreground">Identified Gaps</p>
                   <ul className="space-y-1">
                     {result.gaps.map((gap, i) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
@@ -203,18 +261,42 @@ export default function TestAI() {
                 </div>
               )}
 
-              <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                <p className="text-sm font-medium text-foreground mb-2">Explanation:</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {result.explanation}
-                </p>
-              </div>
+              {/* Rules-based explanation (fallback) */}
+              {result.explanationSource === "rules" && (
+                <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                  <p className="text-sm font-medium text-foreground mb-2">Explanation (rules-based):</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {result.explanation}
+                  </p>
+                </div>
+              )}
+
+              {/* AI Explanation Panel - collapsible, per spec */}
+              {result.explanationSource === "ai" && (
+                <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">
+                    Explanation (AI-generated, informational)
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {result.explanation}
+                  </p>
+                </div>
+              )}
+
+              {/* Interactive AI Panel for on-demand explanations */}
+              {result.explanationSource === "rules" && aiEnabled && (
+                <AIExplanationPanel
+                  scoreResult={result}
+                  supplierName={testSupplier.company_name}
+                  buyerName={testBuyer.company_name}
+                />
+              )}
             </CardContent>
           </Card>
         )}
 
         <p className="text-xs text-center text-muted-foreground">
-          Note: AI explanations require the Edge Function to be deployed and OPENAI_API_KEY configured in Supabase secrets.
+          AI explanations powered by Lovable AI Gateway. Feature flag controlled.
         </p>
       </div>
     </div>

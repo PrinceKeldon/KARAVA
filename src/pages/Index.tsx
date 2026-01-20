@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/Logo";
 import { RoleCard } from "@/components/RoleCard";
@@ -14,6 +15,7 @@ type Role = "supplier" | "buyer" | null;
 type BuyerFlow = "onboarding" | "discovery";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<Role>(null);
   const [buyerFlow, setBuyerFlow] = useState<BuyerFlow>("onboarding");
   const [buyerId, setBuyerId] = useState<string | undefined>();
@@ -88,8 +90,13 @@ const Index = () => {
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="hidden md:inline-flex text-muted-foreground">
-              How It Works
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="hidden md:inline-flex text-muted-foreground"
+              onClick={() => navigate('/about')}
+            >
+              About
             </Button>
             <Button variant="outline" size="sm">
               Sign In
@@ -163,6 +170,89 @@ const Index = () => {
             </p>
             <InteractiveChainVisualization />
           </motion.div>
+        </div>
+      </section>
+
+      {/* Corridor & Focus Micro-Section */}
+      <section className="py-12 border-b border-border">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            {/* Current Focus Badge */}
+            <motion.div 
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="flex justify-center mb-6"
+            >
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted text-sm font-medium text-foreground border border-border">
+                <span>🇰🇪</span>
+                <span>Kenya → Germany</span>
+                <span>🇩🇪</span>
+              </span>
+            </motion.div>
+            
+            {/* Product Categories */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-center mb-6"
+            >
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">
+                Initial Product Categories
+              </h3>
+              <p className="text-muted-foreground">
+                Export-grade tree nuts and selected oilseeds
+              </p>
+              <p className="text-sm text-muted-foreground">
+                (including macadamia and comparable regulated categories)
+              </p>
+            </motion.div>
+            
+            {/* Why These Categories */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="bg-card rounded-lg p-6 border border-border"
+            >
+              <h4 className="font-display font-semibold text-foreground mb-4">
+                Why these categories
+              </h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                These products face the strictest combination of:
+              </p>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span className="text-foreground">Legal export requirements</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span className="text-foreground">EU food safety and contaminant controls</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span className="text-foreground">German buyer readiness thresholds</span>
+                </li>
+              </ul>
+              
+              {/* Key Statement */}
+              <div className="mt-6 pt-4 border-t border-border">
+                <p className="text-sm text-foreground">
+                  By starting where compliance, quality, and documentation are non-negotiable, KARAVA builds a corridor where trade readiness is{" "}
+                  <strong>verified, scored, and explainable</strong> — not assumed.
+                </p>
+              </div>
+              
+              {/* Intentional Design Note */}
+              <p className="mt-4 text-xs text-muted-foreground italic">
+                KARAVA is designed so that most suppliers are not immediately ready — and that is intentional.
+              </p>
+            </motion.div>
+          </div>
         </div>
       </section>
 

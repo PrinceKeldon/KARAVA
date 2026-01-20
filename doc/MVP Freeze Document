@@ -1,0 +1,231 @@
+# KARAVA — MVP Freeze Document
+
+**Corridor:** Kenya → Germany
+**Version:** MVP-1.0
+**Status:** Frozen (No new features without explicit scope review)
+
+---
+
+## 1. Purpose of This Document
+
+This document formally defines the **frozen scope** of the KARAVA MVP.
+
+Its purpose is to:
+
+* Prevent scope creep
+* Align product, engineering, and AI usage
+* Ensure KARAVA reaches a **complete, credible conclusion**
+* Make the MVP demo-ready, buyer-credible, and extensible later
+
+Anything **not explicitly listed as “in scope” is out of scope**.
+
+---
+
+## 2. What KARAVA *Is* (MVP Definition)
+
+KARAVA is a **supplier readiness and buyer fit discovery system** for the **Kenya → Germany trade corridor**.
+
+It answers one core question:
+
+> **“Is this supplier realistically ready to engage German buyers — today?”**
+
+KARAVA does **not** facilitate trade.
+It **reduces false starts** by making readiness visible, strict, and evidence-based.
+
+---
+
+## 3. Canonical Use Case (North Star)
+
+> A Kenyan macadamia (or similar nut/seed) processor completes onboarding and receives a clear, defensible readiness verdict for German buyers.
+
+This is the **only guaranteed use case** in MVP-1.0.
+
+---
+
+## 4. In-Scope Features (Frozen)
+
+### 4.1 Supplier Onboarding (Kenya → Germany)
+
+* Structured onboarding form
+* Evidence-based inputs only
+* Field-level validation using Zod
+* No aspirational or future-state claims accepted
+
+**Examples of accepted inputs:**
+
+* Export licence details
+* Food safety certification (BRC/IFS/FSSC)
+* Lab test evidence
+* Capacity figures (current, verifiable)
+* Traceability description
+
+---
+
+### 4.2 Deterministic Scoring Engine
+
+A **rules-based scoring system** with:
+
+#### a) Hard Trade Gates (Binary)
+
+* Legal export eligibility
+* Mandatory documentation
+* Food safety system
+* EU contaminants/MRL compliance
+
+Failure of any hard gate results in:
+
+```
+Readiness = BLOCKED (Score = 0)
+```
+
+#### b) Readiness Score (0–100)
+
+* Capacity
+* Documentation completeness
+* Consistency indicators
+* Commercial readiness
+
+#### c) Risk Penalties
+
+* Quality variance
+* Unverified volume claims
+* Weak traceability
+* Logistics inexperience
+
+**Scores move conservatively. No single input causes large jumps.**
+
+---
+
+### 4.3 Readiness Verdict Output
+
+Each supplier receives:
+
+* **Status label**
+
+  * Blocked
+  * Conditionally Ready
+  * Ready to Engage
+
+* **Numeric readiness score**
+
+* **Transparent breakdown**
+
+  * Passed/failed hard gates
+  * Points earned
+  * Points deducted (with reasons)
+
+This output is **the core product artifact**.
+
+---
+
+### 4.4 AI Explanations (Feature-Flagged)
+
+AI is used **only as an interpretation layer**.
+
+AI may:
+
+* Explain why a score is low or high
+* Translate regulatory language into plain English
+* Suggest prioritised next steps
+
+AI must **never**:
+
+* Override scores
+* Change thresholds
+* Predict deal success
+* “Approve” blocked suppliers
+
+AI can be fully disabled via feature flag without breaking the product.
+
+---
+
+### 4.5 Corridor Constraints
+
+* Geography: **Kenya → Germany only**
+* Product categories:
+
+  * Edible nuts & seeds (starting with macadamia)
+
+Expansion is explicitly **out of scope** for MVP-1.0.
+
+---
+
+## 5. Explicitly Out of Scope (Non-Negotiable)
+
+KARAVA MVP does **not**:
+
+* Match buyers and suppliers automatically
+* Facilitate transactions or payments
+* Predict pricing or margins
+* Guarantee buyer interest
+* Replace audits or certification bodies
+* Operate as a marketplace
+* Optimize logistics
+* Track shipments
+* Rank suppliers publicly
+* Score “future readiness” or intentions
+
+Any feature resembling the above requires a new product phase.
+
+---
+
+## 6. Product Philosophy (Frozen)
+
+### 6.1 Strict by Design
+
+* Most suppliers should **fail or score low**
+* This reflects real EU/German market conditions
+
+### 6.2 Evidence Over Aspiration
+
+* Only current, verifiable state counts
+* Future plans receive **zero score impact**
+
+### 6.3 AI Is Assistive, Not Authoritative
+
+* Rules decide
+* AI explains
+
+---
+
+## 7. MVP Completion Criteria (Definition of Done)
+
+The MVP is considered **complete** when:
+
+1. A supplier can onboard end-to-end
+2. Validation blocks incomplete or non-compliant data
+3. Scoring executes deterministically
+4. A readiness verdict is produced
+5. AI explanations (if enabled) align with the score
+6. The output is credible to a German buyer
+
+Once these are met, **development stops**.
+
+---
+
+## 8. What Happens After MVP-1.0 (Not Now)
+
+Only after validation with real users may KARAVA consider:
+
+* Buyer dashboards
+* Additional corridors
+* Automated introductions
+* Certification integrations
+* Transaction facilitation
+
+These are **future roadmap items**, not MVP extensions.
+
+---
+
+## 9. Guiding Principle
+
+> **KARAVA does not help people trade.
+> It helps them avoid trading when they are not ready.**
+
+That discipline is the product.
+
+---
+
+**End of MVP Freeze Document**
+
+---

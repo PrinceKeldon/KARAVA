@@ -157,18 +157,6 @@ const Index = () => {
             ))}
           </motion.div>
 
-          {/* Process Visualization */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="max-w-3xl mx-auto bg-card rounded-lg p-6 border border-border"
-          >
-            <p className="text-center text-sm text-muted-foreground mb-5">
-              How qualification works
-            </p>
-            <InteractiveChainVisualization />
-          </motion.div>
         </div>
       </section>
 
@@ -310,18 +298,30 @@ const Index = () => {
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-16">
+      {/* How It Works Section - Unified */}
+      <section className="py-16 bg-gradient-to-br from-primary/5 via-accent/5 to-secondary/10 border-y border-primary/10">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground text-center mb-4">
-              How it works
-            </h2>
-            <p className="text-center text-muted-foreground mb-10 max-w-xl mx-auto">
-              A structured process from intake to qualified introduction
-            </p>
+            {/* Section Header */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-10"
+            >
+              <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+                The Process
+              </span>
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-3">
+                How KARAVA Works
+              </h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                A structured process from intake to qualified introduction
+              </p>
+            </motion.div>
             
-            <div className="grid md:grid-cols-4 gap-6">
+            {/* Step Overview Cards */}
+            <div className="grid md:grid-cols-4 gap-4 mb-10">
               {howItWorks.map((step, index) => (
                 <motion.div
                   key={step.step}
@@ -329,20 +329,42 @@ const Index = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
-                  className="text-center"
+                  className="text-center bg-card/80 backdrop-blur-sm rounded-lg p-4 border border-border hover:border-primary/30 hover:shadow-md transition-all"
                 >
-                  <div className="w-10 h-10 rounded-md bg-primary/10 text-primary font-display font-bold text-sm flex items-center justify-center mx-auto mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-display font-bold text-sm flex items-center justify-center mx-auto mb-3 shadow-sm">
                     {step.step}
                   </div>
-                  <h3 className="font-display font-semibold text-foreground mb-2">
+                  <h3 className="font-display font-semibold text-foreground mb-1.5 text-sm">
                     {step.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     {step.description}
                   </p>
                 </motion.div>
               ))}
             </div>
+
+            {/* Interactive Visualization */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="bg-card rounded-xl p-6 md:p-8 border border-primary/20 shadow-lg"
+            >
+              <div className="text-center mb-6">
+                <h3 className="font-display text-lg font-semibold text-foreground mb-2">
+                  Explore Each Stage
+                </h3>
+                <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                    Click icons for details
+                  </span>
+                </p>
+              </div>
+              <InteractiveChainVisualization />
+            </motion.div>
           </div>
         </div>
       </section>

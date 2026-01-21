@@ -37,10 +37,11 @@ const Index = () => {
     },
   ];
 
+  // Stats are illustrative projections, not verified metrics
   const stats = [
-    { value: "78%", label: "Average assessment accuracy", sublabel: "for market readiness" },
-    { value: "3.2x", label: "Reduction in failed introductions", sublabel: "compared to cold outreach" },
-    { value: "14 days", label: "Average qualification time", sublabel: "from intake to assessment" },
+    { value: "78%", label: "Target assessment accuracy", sublabel: "for market readiness (projected)" },
+    { value: "3.2x", label: "Expected reduction in failed intros", sublabel: "compared to cold outreach (projected)" },
+    { value: "14 days", label: "Target qualification time", sublabel: "from intake to assessment (projected)" },
   ];
 
   const howItWorks = [
@@ -98,9 +99,7 @@ const Index = () => {
             >
               About
             </Button>
-            <Button variant="outline" size="sm">
-              Sign In
-            </Button>
+            {/* Sign In button removed for MVP - authentication not yet implemented */}
           </div>
         </div>
       </nav>

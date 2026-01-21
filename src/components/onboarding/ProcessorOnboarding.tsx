@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -706,6 +707,7 @@ function AssessmentPreviewStep({ form, assessment, onBack, onSubmit, isLoading }
 }
 
 export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const { toast } = useToast();
   
@@ -816,7 +818,12 @@ export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
         description: "Your supplier profile has been validated and saved successfully.",
       });
       
+      // Store the assessment result for the verdict page
+      sessionStorage.setItem("supplierVerdictResult", JSON.stringify(assessment));
+      sessionStorage.setItem("supplierVerdictCompanyName", data.companyName);
+      
       onClose();
+      navigate("/supplier/verdict");
     } catch (error) {
       console.error('Submit error:', error);
       toast({

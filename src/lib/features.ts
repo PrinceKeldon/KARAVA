@@ -1,5 +1,5 @@
 export const FEATURES = {
-  AI_EXPLANATIONS: false,
+  AI_EXPLANATIONS: true,
 };
 
 export function hydrateFeaturesFromDB(

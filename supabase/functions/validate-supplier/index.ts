@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -193,43 +192,24 @@ serve(async (req) => {
       );
     }
 
-    // Create Supabase client to insert validated data
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Insert validated supplier data
-    const { data, error } = await supabase
-      .from("suppliers")
-      .insert([supplierData])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Database insert error:", error);
-      return new Response(
-        JSON.stringify({
-          valid: false,
-          errors: [{ field: 'database', message: error.message, type: 'invalid' }],
-          message: "Failed to save supplier data"
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
-    }
-
-    console.log("Supplier created successfully:", data.id);
+    // MVP Demo Mode: Validation-only
+    // The scoring engine is deterministic and runs client-side
+    // Assessment results are stored in sessionStorage
+    // Database persistence is not required for demo credibility
+    console.log("Supplier validation passed - MVP demo mode (no database persistence)");
 
     return new Response(
       JSON.stringify({
         valid: true,
-        supplier: data,
-        message: "Supplier validated and created successfully"
+        supplier: { 
+          id: 'demo-' + Date.now(), 
+          ...supplierData,
+          created_at: new Date().toISOString()
+        },
+        message: "Supplier validated successfully"
       }),
       {
-        status: 201,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );

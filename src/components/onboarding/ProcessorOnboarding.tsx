@@ -243,7 +243,7 @@ function ComplianceStep({ form, onNext, onBack }: StepProps) {
   const hasExportLicense = watch('hasExportLicense');
   const hasLegalRegistration = watch('hasLegalRegistration');
   const hasCompanyBankAccount = watch('hasCompanyBankAccount');
-  const foodSafetyCertType = watch('foodSafetyCertType');
+  const foodSafetyCerts = watch('foodSafetyCerts') || [];
   const hasContaminantReport = watch('hasContaminantReport');
   const hasPhytosanitaryCert = watch('hasPhytosanitaryCert');
   const hasEUCompliantLabels = watch('hasEUCompliantLabels');
@@ -302,20 +302,25 @@ function ComplianceStep({ form, onNext, onBack }: StepProps) {
 
         <div className="bg-muted/30 rounded-md p-4 border border-border">
           <p className="font-medium text-foreground mb-3 text-sm">EU Food Safety Certification</p>
+          <p className="text-xs text-muted-foreground mb-3">Select all certifications you hold</p>
           <div className="flex flex-wrap gap-2">
-            {[
-              { value: '', label: 'None' },
-              { value: 'BRCGS', label: 'BRCGS' },
-              { value: 'IFS', label: 'IFS' },
-              { value: 'FSSC22000', label: 'FSSC 22000' },
-            ].map((opt) => (
-              <RadioOption
-                key={opt.value}
-                label={opt.label}
-                selected={foodSafetyCertType === opt.value}
-                onChange={() => setValue('foodSafetyCertType', opt.value as '' | 'BRCGS' | 'IFS' | 'FSSC22000')}
-              />
-            ))}
+            {['BRCGS', 'IFS', 'FSSC22000'].map((cert) => {
+              const toggleFoodSafetyCert = (certName: string) => {
+                const currentCerts = foodSafetyCerts || [];
+                const newCerts = currentCerts.includes(certName)
+                  ? currentCerts.filter((c: string) => c !== certName)
+                  : [...currentCerts, certName];
+                setValue('foodSafetyCerts', newCerts);
+              };
+              return (
+                <ToggleOption
+                  key={cert}
+                  label={cert === 'FSSC22000' ? 'FSSC 22000' : cert}
+                  checked={foodSafetyCerts.includes(cert)}
+                  onChange={() => toggleFoodSafetyCert(cert)}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -646,13 +651,13 @@ function AssessmentPreviewStep({ form, assessment, onBack, onSubmit, isLoading }
     parseInt(formData.annualVolume) >= 100 && "Volume meets minimum thresholds",
     formData.roles.includes("Exporter") && "Export experience present",
     formData.hasExportLicense && "Valid export license",
-    formData.foodSafetyCertType && "EU food safety certification",
+    formData.foodSafetyCerts && formData.foodSafetyCerts.length > 0 && "EU food safety certification",
     formData.hasLotCodingSystem && "Traceability system in place",
   ].filter(Boolean);
 
   const warnings = [
     !formData.hasExportLicense && "Missing export license (required)",
-    !formData.foodSafetyCertType && "No EU food safety certification",
+    (!formData.foodSafetyCerts || formData.foodSafetyCerts.length === 0) && "No EU food safety certification",
     !formData.hasPhytosanitaryCert && "Missing phytosanitary certificate",
     formData.qualityVarianceRisk === 'high' && "High quality variance risk",
     formData.traceabilityStrength === 'weak' && "Weak traceability systems",
@@ -766,7 +771,7 @@ export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
         has_legal_registration: data.hasLegalRegistration,
         legal_registration_number: data.legalRegistrationNumber || undefined,
         has_company_bank_account: data.hasCompanyBankAccount,
-        food_safety_cert_type: data.foodSafetyCertType || undefined,
+        food_safety_certs: data.foodSafetyCerts || [],
         has_contaminant_report: data.hasContaminantReport,
         has_phytosanitary_cert: data.hasPhytosanitaryCert,
         has_eu_compliant_labels: data.hasEUCompliantLabels,

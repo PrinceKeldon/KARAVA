@@ -74,8 +74,9 @@ export function evaluateHardGates(supplier: ExtendedSupplier): HardGateResult[] 
   });
 
   // 3. EU-Recognized Food Safety Certification
+  const foodSafetyCerts = supplier.food_safety_certs || [];
   const hasEUFoodSafetyCert = Boolean(
-    supplier.food_safety_cert_type || 
+    foodSafetyCerts.length > 0 || 
     certs.some(c => ['BRCGS', 'IFS', 'FSSC 22000', 'FSSC22000'].includes(c))
   );
   results.push({

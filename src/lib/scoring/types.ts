@@ -66,7 +66,7 @@ export interface SupplierScoringData {
   export_license_valid_until?: string | null;
   legal_registration_number?: string | null;
   has_company_bank_account?: boolean | null;
-  food_safety_cert_type?: 'BRCGS' | 'IFS' | 'FSSC22000' | null;
+  food_safety_certs?: string[] | null;
   food_safety_cert_expiry?: string | null;
   has_contaminant_report?: boolean | null;
   contaminant_report_date?: string | null;

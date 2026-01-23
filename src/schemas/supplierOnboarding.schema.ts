@@ -29,7 +29,7 @@ export const SupplierOnboardingSchema = z.object({
   hasLegalRegistration: z.boolean().default(false),
   legalRegistrationNumber: z.string().optional(),
   hasCompanyBankAccount: z.boolean().default(false),
-  foodSafetyCertType: z.enum(["", "BRCGS", "IFS", "FSSC22000"]).default(""),
+  foodSafetyCerts: z.array(z.string()).default([]),
   hasContaminantReport: z.boolean().default(false),
   hasPhytosanitaryCert: z.boolean().default(false),
   hasEUCompliantLabels: z.boolean().default(false),
@@ -78,7 +78,7 @@ export type SupplierOnboardingInput = z.infer<typeof SupplierOnboardingSchema>;
 export const stepFieldGroups: Record<number, (keyof SupplierOnboardingInput)[]> = {
   1: ['companyName', 'location', 'roles'],
   2: ['products', 'annualVolume'],
-  3: ['hasExportLicense', 'exportLicenseNumber', 'hasLegalRegistration', 'legalRegistrationNumber', 'foodSafetyCertType'],
+  3: ['hasExportLicense', 'exportLicenseNumber', 'hasLegalRegistration', 'legalRegistrationNumber', 'foodSafetyCerts'],
   4: ['certifications', 'traceability', 'eudrStatus'],
   5: ['qualityVarianceRisk', 'traceabilityStrength'],
 };
@@ -101,7 +101,7 @@ export const defaultFormValues: SupplierOnboardingInput = {
   hasLegalRegistration: false,
   legalRegistrationNumber: '',
   hasCompanyBankAccount: false,
-  foodSafetyCertType: '',
+  foodSafetyCerts: [],
   hasContaminantReport: false,
   hasPhytosanitaryCert: false,
   hasEUCompliantLabels: false,

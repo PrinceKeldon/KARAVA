@@ -29,12 +29,8 @@ const Privacy = () => {
             transition={{ duration: 0.5 }}
             className="max-w-3xl"
           >
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Privacy Policy
-            </h1>
-            <p className="text-muted-foreground">
-              Effective date: January 2026
-            </p>
+            <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">Privacy Policy</h1>
+            <p className="text-muted-foreground">Effective date: January 2026</p>
           </motion.div>
         </div>
       </section>
@@ -49,7 +45,9 @@ const Privacy = () => {
             className="max-w-3xl space-y-12"
           >
             <p className="text-muted-foreground">
-              KARAVA ("we", "our", "us") respects your privacy and is committed to protecting the personal and business information you share with us. This Privacy Policy explains what data we collect, how we use it, and your rights when using the KARAVA platform.
+              KARAVA ("we", "our", "us") respects your privacy and is committed to protecting the personal and business
+              information you share with us. This Privacy Policy explains what data we collect, how we use it, and your
+              rights when using the KARAVA platform.
             </p>
 
             <div className="space-y-4">
@@ -65,7 +63,8 @@ const Privacy = () => {
                 <li>Technical data such as IP address, browser type, and usage logs</li>
               </ul>
               <p className="text-muted-foreground">
-                We do not collect consumer personal data or sensitive personal identifiers unless explicitly required for verification purposes.
+                We do not collect consumer personal data or sensitive personal identifiers unless explicitly required
+                for verification purposes.
               </p>
             </div>
 
@@ -86,7 +85,8 @@ const Privacy = () => {
             <div className="space-y-4">
               <h2 className="font-display text-xl font-semibold text-foreground">3. AI Usage</h2>
               <p className="text-muted-foreground">
-                Where enabled, AI is used strictly to explain readiness results and regulatory context. AI does not make decisions, alter scores, or override validation logic.
+                Where enabled, AI is used strictly to explain readiness results and regulatory context. AI does not make
+                decisions, alter scores, or override validation logic.
               </p>
             </div>
 
@@ -105,7 +105,8 @@ const Privacy = () => {
             <div className="space-y-4">
               <h2 className="font-display text-xl font-semibold text-foreground">5. Data Retention</h2>
               <p className="text-muted-foreground">
-                Data is retained only as long as necessary to provide the service or meet legal obligations. Users may request deletion of their data at any time.
+                Data is retained only as long as necessary to provide the service or meet legal obligations. Users may
+                request deletion of their data at any time.
               </p>
             </div>
 
@@ -119,14 +120,21 @@ const Privacy = () => {
                 <li>Restrict processing</li>
               </ul>
               <p className="text-muted-foreground">
-                Requests can be made via the <a href="/contact" className="text-primary hover:underline">Contact page</a>.
+                Requests can be made via the{" "}
+                <a href="/contact" className="text-primary hover:underline">
+                  Contact page
+                </a>
+                .
               </p>
             </div>
 
             <div className="space-y-4">
               <h2 className="font-display text-xl font-semibold text-foreground">7. Contact</h2>
               <p className="text-muted-foreground">
-                For privacy-related questions, contact: <a href="mailto:privacy@karava.trade" className="text-primary hover:underline">privacy@karava.trade</a>
+                For privacy-related questions, contact:{" "}
+                <a href="mailto:privacy@karava.trade" className="text-primary hover:underline">
+                  hello@karava.trade
+                </a>
               </p>
             </div>
           </motion.div>
@@ -142,9 +150,15 @@ const Privacy = () => {
               © 2026 KARAVA. Discovery and qualification for Kenya-Germany agricultural trade.
             </p>
             <div className="flex gap-6 text-xs text-muted-foreground">
-              <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
-              <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
-              <a href="/contact" className="hover:text-foreground transition-colors">Contact</a>
+              <a href="/privacy" className="hover:text-foreground transition-colors">
+                Privacy
+              </a>
+              <a href="/terms" className="hover:text-foreground transition-colors">
+                Terms
+              </a>
+              <a href="/contact" className="hover:text-foreground transition-colors">
+                Contact
+              </a>
             </div>
           </div>
         </div>

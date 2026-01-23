@@ -84,21 +84,116 @@ Provide:
 Keep response under 150 words. Be direct and factual.`;
 }
 
+// Valid status values for supplier readiness
+const VALID_STATUSES = ['BLOCKED', 'NOT_READY', 'CONDITIONALLY_READY', 'HIGH_READINESS'];
+
+// Sanitize string to prevent prompt injection
+function sanitizeString(str: unknown, maxLength = 100): string {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/[{}[\]<>]/g, '') // Remove potential injection characters
+    .replace(/\n{2,}/g, '\n') // Limit consecutive newlines
+    .substring(0, maxLength)
+    .trim();
+}
+
+// Validate and sanitize payload to prevent prompt injection
+function validateAndSanitizePayload(data: unknown): {
+  supplierName: string;
+  buyerName: string;
+  status: string;
+  totalScore: number;
+  readinessScore: number;
+  passedHardGates: boolean;
+  hardGateFailures: { id: string; label: string; reason?: string }[];
+  readinessBreakdown: { category: string; earnedPoints: number; maxPoints: number }[];
+  riskPenalties: { id: string; label: string; penalty: number; reason: string }[];
+  gaps: string[];
+  corridor: string;
+} {
+  const payload = data as Record<string, unknown>;
+  
+  // Validate status
+  const status = VALID_STATUSES.includes(payload.status as string) 
+    ? (payload.status as string) 
+    : 'NOT_READY';
+
+  // Sanitize and limit arrays
+  const sanitizedGaps = Array.isArray(payload.gaps) 
+    ? payload.gaps.slice(0, 20).map((g) => sanitizeString(g, 200)).filter(Boolean)
+    : [];
+
+  const sanitizedHardGateFailures = Array.isArray(payload.hardGateFailures)
+    ? payload.hardGateFailures.slice(0, 10).map((g: unknown) => {
+        const gate = g as Record<string, unknown>;
+        return {
+          id: sanitizeString(gate.id, 50),
+          label: sanitizeString(gate.label, 100),
+          reason: gate.reason ? sanitizeString(gate.reason, 200) : undefined,
+        };
+      })
+    : [];
+
+  const sanitizedBreakdown = Array.isArray(payload.readinessBreakdown)
+    ? payload.readinessBreakdown.slice(0, 10).map((c: unknown) => {
+        const cat = c as Record<string, unknown>;
+        return {
+          category: sanitizeString(cat.category, 50),
+          earnedPoints: Math.max(0, Math.min(100, Number(cat.earnedPoints) || 0)),
+          maxPoints: Math.max(0, Math.min(100, Number(cat.maxPoints) || 0)),
+        };
+      })
+    : [];
+
+  const sanitizedPenalties = Array.isArray(payload.riskPenalties)
+    ? payload.riskPenalties.slice(0, 10).map((p: unknown) => {
+        const pen = p as Record<string, unknown>;
+        return {
+          id: sanitizeString(pen.id, 50),
+          label: sanitizeString(pen.label, 100),
+          penalty: Math.max(0, Math.min(50, Number(pen.penalty) || 0)),
+          reason: sanitizeString(pen.reason, 200),
+        };
+      })
+    : [];
+
+  return {
+    supplierName: sanitizeString(payload.supplierName, 100) || 'Unknown Supplier',
+    buyerName: sanitizeString(payload.buyerName, 100) || 'Unknown Buyer',
+    status,
+    totalScore: Math.max(0, Math.min(100, Number(payload.totalScore) || 0)),
+    readinessScore: Math.max(0, Math.min(100, Number(payload.readinessScore) || 0)),
+    passedHardGates: Boolean(payload.passedHardGates),
+    hardGateFailures: sanitizedHardGateFailures,
+    readinessBreakdown: sanitizedBreakdown,
+    riskPenalties: sanitizedPenalties,
+    gaps: sanitizedGaps,
+    corridor: sanitizeString(payload.corridor, 50) || 'Kenya → Germany',
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const payload = await req.json();
+    const rawPayload = await req.json();
+    
+    // Validate and sanitize all input to prevent prompt injection
+    const payload = validateAndSanitizePayload(rawPayload);
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "Service temporarily unavailable", explanation: null }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Quick return if no meaningful data
-    if (!payload.gaps?.length && payload.passedHardGates !== false) {
+    if (!payload.gaps.length && payload.passedHardGates !== false) {
       return new Response(
         JSON.stringify({ 
           explanation: "This supplier aligns well with current EU trade requirements for the Kenya-Germany corridor." 
@@ -107,19 +202,7 @@ serve(async (req) => {
       );
     }
 
-    const userPrompt = buildUserPrompt({
-      status: payload.status || 'NOT_READY',
-      totalScore: payload.totalScore ?? 0,
-      readinessScore: payload.readinessScore ?? 0,
-      passedHardGates: payload.passedHardGates ?? true,
-      hardGateFailures: payload.hardGateFailures || [],
-      readinessBreakdown: payload.readinessBreakdown || [],
-      riskPenalties: payload.riskPenalties || [],
-      gaps: payload.gaps || [],
-      supplierName: payload.supplierName || 'Unknown Supplier',
-      buyerName: payload.buyerName || 'Unknown Buyer',
-      corridor: payload.corridor || 'Kenya → Germany',
-    });
+    const userPrompt = buildUserPrompt(payload);
 
     console.log("Calling Lovable AI Gateway...");
 
@@ -169,10 +252,19 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("explain-fit error:", error);
+    // Log full error details server-side for debugging
+    console.error("explain-fit error:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Return generic error message to client to prevent information leakage
     return new Response(
-      JSON.stringify({ error: errorMessage, explanation: null }),
+      JSON.stringify({ 
+        error: "Unable to generate explanation. Please try again.", 
+        explanation: null 
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -215,13 +215,18 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("validate-supplier error:", error);
+    // Log full error details server-side for debugging
+    console.error("validate-supplier error:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
     
+    // Return generic error message to client to prevent information leakage
     return new Response(
       JSON.stringify({
         valid: false,
-        errors: [{ field: 'server', message: errorMessage, type: 'invalid' }],
+        errors: [{ field: 'server', message: 'An error occurred during validation', type: 'invalid' }],
         message: "Server error during validation"
       }),
       {

@@ -45,27 +45,29 @@ AI only **reads** the final score result.
 
 ## 2️⃣ Feature Flag Wiring (Frontend)
 
-### Step 1: Define the flag
+### Step 1: Define the flag (as actually implemented)
 
-**Location**
+**Actual location** (not `src/config/features.ts` — that path doesn't exist)
 
 ```
-src/config/features.ts
+src/lib/features.ts
 ```
 
 ```ts
 export const FEATURES = {
-  AI_EXPLANATIONS_ENABLED: false
+  AI_EXPLANATIONS: true,   // NOTE: live default is true, not false
 };
 ```
 
-Later this can be:
+The Supabase-driven override this doc originally described as a "later" step is **already implemented**:
 
-* Supabase-driven
-* Env-driven
-* Role-based
+```
+src/lib/featureFlags.ts   — getFeatureFlags() reads a `feature_flags`
+                            table and hydrateFeaturesFromDB() applies
+                            overrides on top of the static defaults above.
+```
 
-For now: static + safe.
+**Open question worth a deliberate decision, not just a docs fix:** the original spec called for a safe `false` default with AI as strictly opt-in. The live default is `true`. If that was a conscious choice, fine — but it should be a decision on record, not a drift.
 
 ---
 
@@ -223,21 +225,15 @@ The scorecard must feel **rock-solid regardless of AI**.
 
 ---
 
-## 8️⃣ Backend Contract (Very Important)
+## 8️⃣ Backend Contract (Actual)
 
-The frontend should call **one endpoint only**:
+There is no REST endpoint at `/ai/explain-score` — the frontend calls the Supabase edge function directly via the SDK, from `src/lib/aiExplainer.ts`:
 
+```ts
+supabase.functions.invoke("explain-fit", { body: { ...scoreResult fields } })
 ```
-POST /ai/explain-score
-```
 
-Payload:
-
-```json
-{
-  "scoreResult": { ... }
-}
-```
+Payload fields sent (flattened, not nested under `scoreResult`): `supplierName`, `buyerName`, `corridor`, `status`, `totalScore`, `readinessScore`, `passedHardGates`, `hardGateFailures`, `readinessBreakdown`, `riskPenalties`, `gaps`.
 
 Response:
 
@@ -247,7 +243,7 @@ Response:
 }
 ```
 
-If backend fails → frontend ignores AI gracefully.
+If the edge function call fails → `explainFitWithAI()` catches the error and returns `null`, and the UI treats that as "no explanation available." This matches the spirit of the original doc even though the transport mechanism differs.
 
 ---
 

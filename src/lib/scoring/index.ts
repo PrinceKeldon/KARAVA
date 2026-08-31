@@ -139,11 +139,13 @@ export function calculateQuickReadiness(supplier: Supplier): {
     gaps.push('Missing HACCP certification');
   }
 
-  // Check EUDR compliance
-  if (!certs.includes('EUDR Compliant')) {
-    score -= 10;
-    gaps.push('EUDR compliance not verified');
-  }
+  // EUDR is intentionally NOT scored here. It has no legal basis for the
+  // current frozen MVP scope (macadamia/tree nuts are not EUDR-covered
+  // commodities — see doc/scoring/kenya-germany-readiness-spec.md §6 and
+  // doc/MVP Freeze Document §5a). The certification/status is still
+  // collected on the onboarding form as forward-scaffolding for a planned
+  // coffee product-category track, where it will apply. Do not reintroduce
+  // an EUDR penalty here without gating it to EUDR-covered categories.
 
   // Export experience
   if (!supplier.export_experience) {

@@ -156,3 +156,12 @@ Lovable must ensure:
 > **AI explains the score — it never argues with it.**
 
 ---
+
+## Implementation Notes (Added — Docs Reconciliation)
+
+Two things the live `explain-fit` edge function does that this spec didn't originally call for, both worth keeping and formalizing here:
+
+* **Response length cap:** output is capped at 150 words. Add this to the system/user prompt contract above.
+* **Input sanitization:** a `sanitizeString()` step strips `{}[],<>` characters and collapses repeated newlines from all payload fields before they reach the prompt, as a defense against prompt injection via supplier/buyer-supplied text (company names, etc.). This should be treated as a required part of the contract, not an implementation detail — any future reimplementation of this function must keep it.
+
+---

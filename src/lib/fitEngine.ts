@@ -148,19 +148,12 @@ export function calculateReadinessFromFormData(formData: {
     gaps.push('Missing HACCP certification');
   }
 
-  // EUDR status
-  if (eudrStatus === 'Not started') {
-    readinessScore -= 20;
-    gaps.push('EUDR documentation not started');
-  } else if (eudrStatus === 'In progress') {
-    readinessScore -= 10;
-    gaps.push('EUDR documentation in progress');
-  } else if (eudrStatus === 'Unsure') {
-    readinessScore -= 15;
-    gaps.push('EUDR compliance status unknown');
-  } else if (eudrStatus === 'Complete') {
-    readinessScore += 10;
-  }
+  // EUDR is intentionally NOT scored here — see the matching note in
+  // src/lib/scoring/index.ts. eudrStatus is still accepted as a form field
+  // (forward-scaffolding for a planned coffee track) but has no scoring
+  // effect for the current macadamia-only MVP scope. Silence the unused-var
+  // lint by referencing it in a no-op:
+  void eudrStatus;
 
   // Traceability
   if (traceability === 'None') {

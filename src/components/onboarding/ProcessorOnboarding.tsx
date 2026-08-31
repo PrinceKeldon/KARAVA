@@ -515,6 +515,9 @@ function ReadinessStep({ form, onNext, onBack }: StepProps) {
         
         <div className="bg-muted/30 rounded-md p-4 border border-border">
           <p className="font-medium text-foreground mb-3 text-sm">EUDR documentation status</p>
+          <p className="text-xs text-muted-foreground mb-3">
+            Optional for this product category — not currently part of your readiness score.
+          </p>
           <div className="flex flex-wrap gap-2">
             {["Complete", "In progress", "Not started", "Unsure"].map((opt) => (
               <RadioOption

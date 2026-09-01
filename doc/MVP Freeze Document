@@ -171,14 +171,7 @@ Any feature resembling the above requires a new product phase.
 
 ## 5a. Known Deviation Requiring a Decision (Added — Docs Reconciliation)
 
-The current onboarding form and scoring code (`calculateQuickReadiness`, `calculateReadinessFromFormData` in `src/lib/fitEngine.ts` and `src/lib/scoring/index.ts`) already ask for and score "EUDR documentation status" and "EUDR Compliant" certification.
-
-Macadamia is **not** an EUDR-covered commodity (EUDR covers cattle, cocoa, coffee, palm oil, rubber, soy, wood only). As frozen, this MVP's only guaranteed use case is macadamia. So this field is currently either:
-
-* dead weight that confuses/penalizes macadamia suppliers for an irrelevant requirement, or
-* deliberate early scaffolding for a planned coffee/EUDR-covered product-category expansion.
-
-**Decision needed before further scoring changes ship.** Until decided, treat the EUDR field as present-but-unofficial — it is not part of the frozen hard-gate/readiness spec in `doc/scoring/kenya-germany-readiness-spec.md`.
+**Status: resolved.** See `doc/scoring/coffee-eudr-addendum.md` for the full decision and design. Summary: EUDR is now scored, but conditionally — only for coffee (the one EUDR-covered category KARAVA supports), via `isEUDRCoveredCategory()` in `src/lib/scoring/eudr.ts`. Macadamia and other current categories remain unaffected.
 
 ---
 

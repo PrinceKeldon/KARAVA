@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { FormError } from "@/components/ui/form-error";
 import { useToast } from "@/hooks/use-toast";
 import { calculateReadinessFromFormData, type FitResult } from "@/lib/fitEngine";
+import { isEUDRCoveredCategory } from "@/lib/scoring/eudr";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   SupplierOnboardingSchema, 
@@ -187,7 +188,7 @@ function ProductsStep({ form, onNext, onBack }: StepProps) {
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">Products</label>
           <div className="grid grid-cols-2 gap-2">
-            {["Macadamia (in-shell)", "Macadamia (kernel)", "Sesame Seeds", "Sesame Oil", "Other Oilseeds"].map((product) => (
+            {["Macadamia (in-shell)", "Macadamia (kernel)", "Sesame Seeds", "Sesame Oil", "Coffee (green/parchment)", "Other Oilseeds"].map((product) => (
               <ToggleOption
                 key={product}
                 label={product}
@@ -361,6 +362,8 @@ function ReadinessStep({ form, onNext, onBack }: StepProps) {
   const { watch, setValue } = form;
   const certifications = watch('certifications');
   const eudrStatus = watch('eudrStatus');
+  const products = watch('products');
+  const eudrApplies = isEUDRCoveredCategory(products);
   const traceability = watch('traceability');
   const hasGradeDefinitions = watch('hasGradeDefinitions');
   const hasMoistureDefectLimits = watch('hasMoistureDefectLimits');
@@ -516,7 +519,9 @@ function ReadinessStep({ form, onNext, onBack }: StepProps) {
         <div className="bg-muted/30 rounded-md p-4 border border-border">
           <p className="font-medium text-foreground mb-3 text-sm">EUDR documentation status</p>
           <p className="text-xs text-muted-foreground mb-3">
-            Optional for this product category — not currently part of your readiness score.
+            {eudrApplies
+              ? "Required for coffee exports to the EU — this affects your readiness score."
+              : "Optional for this product category — not currently part of your readiness score."}
           </p>
           <div className="flex flex-wrap gap-2">
             {["Complete", "In progress", "Not started", "Unsure"].map((opt) => (

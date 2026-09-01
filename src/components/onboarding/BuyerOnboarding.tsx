@@ -81,7 +81,7 @@ function CompanyStep({ formData, setFormData, onNext }: StepProps) {
 }
 
 function ProductsStep({ formData, setFormData, onNext, onBack }: StepProps) {
-  const products = ["Macadamia Kernels", "Macadamia Oil", "Sesame Seeds", "Sesame Oil", "Other Oilseeds"];
+  const products = ["Macadamia Kernels", "Macadamia Oil", "Sesame Seeds", "Sesame Oil", "Coffee", "Other Oilseeds"];
   
   return (
     <div className="space-y-6">

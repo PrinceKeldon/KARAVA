@@ -266,8 +266,8 @@ Scores move slowly, penalties are conservative, and excellence is rare by design
 **Buyer-fit adjustment layer (undocumented, implemented):**
 `fitEngine.ts` applies additional score adjustments on top of the readiness score above when buyer requirements are supplied — a −15 penalty if supplier capacity is below the buyer's minimum order quantity, and a −20 penalty if the supplier's product category doesn't match the buyer's requested category. This is a real, live part of the scoring outcome and belongs in this spec as a fourth layer: Hard Gates → Readiness Score → Risk Discounts → **Buyer-Fit Adjustment**.
 
-**EUDR fields (undocumented, implemented, corridor-inconsistent):**
-The onboarding form and two of the scoring code paths (`calculateQuickReadiness`, `calculateReadinessFromFormData`) collect and score EUDR documentation status, which has no basis in this spec's hard gates or readiness categories, and no legal basis for macadamia (EUDR does not cover tree nuts). See `MVP Freeze Document` §5a for the decision this requires. Until resolved, this spec (hard gates, readiness categories, risk penalties, score bands above) remains the authoritative, frozen scope — the EUDR fields in code are not part of it.
+**EUDR fields (resolved — see `doc/scoring/coffee-eudr-addendum.md`):**
+The onboarding form's EUDR documentation status field is now scored conditionally, gated on product category via `isEUDRCoveredCategory()` (`src/lib/scoring/eudr.ts`). It applies to coffee (the only EUDR-covered category KARAVA currently supports); it remains unscored for macadamia and other current categories. This is implemented today in the form-based scoring path (`calculateReadinessFromFormData`) and the quick-readiness path (`calculateQuickReadiness`) — see the addendum doc for the fuller EUDR hard-gate design (geolocation, deforestation-free status, legality, due diligence statement) and what's specified vs. actually implemented.
 
 ---
 

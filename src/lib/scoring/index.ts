@@ -6,6 +6,7 @@ import type { Supplier } from '@/types/supabase';
 import { evaluateHardGates, hasFailedGates, getFailedGates } from './hardGates';
 import { calculateReadinessBreakdown, calculateReadinessScore, getReadinessGaps } from './readinessScore';
 import { calculateRiskPenalties, calculateTotalPenalty } from './riskDiscounts';
+import { isEUDRCoveredCategory } from './eudr';
 
 export type { ScoreResult, ScoreBand, SupplierScoringData };
 export type { HardGateResult, ReadinessCategory, AppliedRiskPenalty } from './types';
@@ -139,13 +140,16 @@ export function calculateQuickReadiness(supplier: Supplier): {
     gaps.push('Missing HACCP certification');
   }
 
-  // EUDR is intentionally NOT scored here. It has no legal basis for the
-  // current frozen MVP scope (macadamia/tree nuts are not EUDR-covered
-  // commodities — see doc/scoring/kenya-germany-readiness-spec.md §6 and
-  // doc/MVP Freeze Document §5a). The certification/status is still
-  // collected on the onboarding form as forward-scaffolding for a planned
-  // coffee product-category track, where it will apply. Do not reintroduce
-  // an EUDR penalty here without gating it to EUDR-covered categories.
+  // EUDR is only scored for EUDR-covered product categories (currently:
+  // coffee) — see src/lib/scoring/eudr.ts and MVP Freeze Document §5a.
+  // Macadamia/tree nuts and other current categories are not EUDR-covered,
+  // so this stays conditional rather than a blanket penalty.
+  if (isEUDRCoveredCategory(supplier.product_category)) {
+    if (!certs.includes('EUDR Compliant')) {
+      score -= 10;
+      gaps.push('EUDR compliance not verified — required for coffee exports to the EU');
+    }
+  }
 
   // Export experience
   if (!supplier.export_experience) {

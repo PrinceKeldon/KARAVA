@@ -30,7 +30,7 @@ interface DisplaySupplier {
 }
 
 const filters = {
-  products: ["All Products", "Macadamia", "Sesame Seeds", "Sesame Oil"],
+  products: ["All Products", "Macadamia", "Sesame Seeds", "Sesame Oil", "Coffee"],
   fitScore: ["All Scores", "80%+", "60%+"],
   certifications: ["Any", "Organic", "HACCP", "EUDR Compliant"],
 };

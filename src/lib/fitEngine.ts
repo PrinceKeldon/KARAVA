@@ -10,6 +10,7 @@ import {
   type ReadinessCategory,
   type AppliedRiskPenalty,
 } from './scoring';
+import { isEUDRCoveredCategory } from './scoring/eudr';
 
 export interface FitResult {
   fitScore: number;
@@ -123,6 +124,7 @@ export function calculateReadinessFromFormData(formData: {
   traceability?: string;
   exportCapacity?: string;
   annualVolume?: string;
+  products?: string[];
 }): FitResult {
   let readinessScore = 50; // Start at midpoint
   const gaps: string[] = [];
@@ -148,12 +150,27 @@ export function calculateReadinessFromFormData(formData: {
     gaps.push('Missing HACCP certification');
   }
 
-  // EUDR is intentionally NOT scored here — see the matching note in
-  // src/lib/scoring/index.ts. eudrStatus is still accepted as a form field
-  // (forward-scaffolding for a planned coffee track) but has no scoring
-  // effect for the current macadamia-only MVP scope. Silence the unused-var
-  // lint by referencing it in a no-op:
-  void eudrStatus;
+  // EUDR is only scored for EUDR-covered product categories (currently:
+  // coffee). Macadamia, sesame, and other oilseeds are not EUDR-covered —
+  // see src/lib/scoring/eudr.ts and MVP Freeze Document §5a for why this
+  // is conditional rather than universal.
+  if (isEUDRCoveredCategory(formData.products)) {
+    if (eudrStatus === 'Not started') {
+      readinessScore -= 20;
+      gaps.push('EUDR due diligence not started — required for coffee exports to the EU');
+    } else if (eudrStatus === 'In progress') {
+      readinessScore -= 10;
+      gaps.push('EUDR due diligence in progress');
+    } else if (eudrStatus === 'Unsure') {
+      readinessScore -= 15;
+      gaps.push('EUDR compliance status unknown — required for coffee exports to the EU');
+    } else if (eudrStatus === 'Complete') {
+      readinessScore += 10;
+    }
+  } else {
+    // Not an EUDR-covered category — collected but not scored.
+    void eudrStatus;
+  }
 
   // Traceability
   if (traceability === 'None') {

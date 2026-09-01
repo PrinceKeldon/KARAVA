@@ -22,6 +22,14 @@ export const SupplierOnboardingSchema = z.object({
   certifications: z.array(z.string()).default([]),
   eudrStatus: z.string().optional(),
   traceability: z.string().optional(),
+
+  // EUDR hard gate fields — coffee only, see doc/scoring/coffee-eudr-addendum.md.
+  // Not required at the schema level (not every product category needs them);
+  // gating on relevance happens in scoring, not validation.
+  eudrGeolocationProvided: z.boolean().default(false),
+  eudrDeforestationFreeConfirmed: z.boolean().default(false),
+  eudrLegalityDocumented: z.boolean().default(false),
+  eudrDueDiligenceReady: z.boolean().default(false),
   
   // Hard Gates (Compliance)
   hasExportLicense: z.boolean().default(false),
@@ -79,7 +87,7 @@ export const stepFieldGroups: Record<number, (keyof SupplierOnboardingInput)[]> 
   1: ['companyName', 'location', 'roles'],
   2: ['products', 'annualVolume'],
   3: ['hasExportLicense', 'exportLicenseNumber', 'hasLegalRegistration', 'legalRegistrationNumber', 'foodSafetyCerts'],
-  4: ['certifications', 'traceability', 'eudrStatus'],
+  4: ['certifications', 'traceability', 'eudrStatus', 'eudrGeolocationProvided', 'eudrDeforestationFreeConfirmed', 'eudrLegalityDocumented', 'eudrDueDiligenceReady'],
   5: ['qualityVarianceRisk', 'traceabilityStrength'],
 };
 
@@ -96,6 +104,10 @@ export const defaultFormValues: SupplierOnboardingInput = {
   certifications: [],
   eudrStatus: '',
   traceability: '',
+  eudrGeolocationProvided: false,
+  eudrDeforestationFreeConfirmed: false,
+  eudrLegalityDocumented: false,
+  eudrDueDiligenceReady: false,
   hasExportLicense: false,
   exportLicenseNumber: '',
   hasLegalRegistration: false,

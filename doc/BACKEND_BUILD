@@ -1,433 +1,146 @@
-# KARAVA Backend — MVP Build Specification
+# KARAVA Backend — As-Built Architecture
 
 **Corridor:** Kenya → Germany
 **Purpose:** Discovery & Market-Fit Qualification (Pre-Trade)
+**Status:** Reflects the actual implementation as of Aug 2026. Supersedes the original FastAPI/SQLAlchemy spec, which was never built — the project shipped on Supabase instead.
 
 ---
 
 ## 1. Purpose of This Document
 
-This document defines the **authoritative backend architecture** for the KARAVA MVP.
+This document describes the **backend as it actually exists in the repo today**, so that future work (by Keldon, a collaborator, or an AI coding agent) starts from reality instead of an aspirational spec.
 
-It is intended to:
-
-* Guide backend implementation by Lovable
-* Keep scope disciplined and aligned to product intent
-* Ensure modular, readable, and extensible code
-* Prevent overbuilding (no trade execution, no logistics, no payments)
-
-This backend supports **discovery and qualification only**.
+The original `BACKEND_BUILD` draft specified FastAPI + SQLAlchemy + SQLite/Postgres. That direction was abandoned early — the whole app, frontend and backend, runs on **Lovable + Supabase**. This doc replaces that draft.
 
 ---
 
-## 2. Core Product Intent (Non-Negotiable)
+## 2. Core Product Intent (Unchanged)
 
 KARAVA helps:
 
 * Kenyan agricultural suppliers understand **German market fit**
 * German buyers identify **qualified Kenyan supply**
 
-This happens **before trade**.
-
-The backend must:
-
-* Structure information
-* Generate market-fit insights
-* Surface readiness signals
-* Enable informed introductions
-
-The backend must **not**:
-
-* Execute transactions
-* Handle payments
-* Guarantee deals
-* Replace traders, brokers, or logistics providers
+This happens **before trade**. The backend structures information, runs deterministic scoring, and (optionally) generates AI explanations. It does not execute transactions, handle payments, or guarantee deals.
 
 ---
 
-## 3. Technology Stack
+## 3. Actual Technology Stack
 
-### Backend Framework
-
-* **FastAPI** (Python)
-
-### Database
-
-* **SQLite** (local development)
-* **PostgreSQL** (production-ready)
-
-### ORM
-
-* **SQLAlchemy**
-
-### AI
-
-* Provider-agnostic abstraction
-* Default: OpenAI or Gemini
-* AI used **only** for fit analysis and explanation
-
-### Auth (out of scope for MVP)
-
-* No authentication required initially
-* All endpoints open or protected via basic admin flag if needed
+* **Frontend:** Vite + React + TypeScript + shadcn-ui + Tailwind
+* **Backend:** Supabase (Postgres + Edge Functions), not FastAPI
+* **Edge Functions runtime:** Deno (`supabase/functions/*/index.ts`)
+* **Client SDK:** `@supabase/supabase-js` via `src/integrations/supabase/client.ts`
+* **AI:** Called from within edge functions, not from a separate provider-agnostic Python service as originally planned
+* **Auth:** Both edge functions currently run with `verify_jwt = false` (see `supabase/config.toml`) — open endpoints, no auth enforced yet. This still matches the MVP's original "auth out of scope" intent, but is worth revisiting before any paywall/buyer-monetization work.
 
 ---
 
-## 4. High-Level Architecture
+## 4. Actual Architecture
 
 ```
-Client (Web / Mobile)
+Client (React app)
         |
         v
-FastAPI Routers
+Supabase client SDK (src/integrations/supabase/client.ts)
         |
         v
-Service Layer (Business Logic)
+Supabase Edge Functions (Deno)
+   ├── validate-supplier   — server-side mirror of the Zod onboarding schema
+   └── explain-fit         — AI explanation of an already-computed score
         |
         v
-Database (SQLAlchemy Models)
-        |
-        v
-AI Fit Engine (Isolated)
+Supabase Postgres (schema managed via the Supabase dashboard —
+NOT version-controlled in this repo; no supabase/migrations/ exists)
 ```
 
-**AI is not embedded in routers.**
-All intelligence lives in a dedicated service.
+Scoring itself is **not** a backend/edge-function concern — it runs client-side, in pure TypeScript, before anything reaches Supabase. See Section 6.
 
 ---
 
-## 5. Project Structure
+## 5. Project Structure (Actual)
 
 ```
-app/
-├── main.py                # Application entry point
-├── database.py            # DB connection & session
-├── models.py              # SQLAlchemy models
-├── schemas.py             # Pydantic schemas
-├── core/
-│   └── config.py          # Environment & settings
-├── routers/
-│   ├── health.py
-│   ├── suppliers.py
-│   ├── buyers.py
-│   ├── fit.py
-│   └── intros.py
-├── services/
-│   ├── fit_engine.py      # AI-powered fit analysis
-│   └── scoring.py         # Deterministic scoring helpers
-└── utils/
-    └── enums.py           # Shared enums
+src/
+├── lib/
+│   ├── fitEngine.ts        # Orchestrates scoring for supplier/buyer fit
+│   ├── fitResolver.ts
+│   ├── aiExplainer.ts      # Calls the explain-fit edge function
+│   ├── features.ts         # Feature flag object (client-side)
+│   ├── featureFlags.ts     # Pulls flag overrides from Supabase `feature_flags` table
+│   └── scoring/
+│       ├── index.ts        # Main scoring orchestrator + calculateQuickReadiness
+│       ├── hardGates.ts    # Binary hard-gate evaluation
+│       ├── readinessScore.ts
+│       ├── riskDiscounts.ts
+│       └── types.ts
+├── components/
+│   ├── onboarding/
+│   │   ├── ProcessorOnboarding.tsx
+│   │   ├── BuyerOnboarding.tsx
+│   │   └── BuyerDiscovery.tsx
+│   ├── AIExplanationPanel.tsx
+│   └── InteractiveChainVisualization.tsx
+├── pages/
+│   ├── SupplierVerdict.tsx
+│   ├── About.tsx, Contact.tsx, Privacy.tsx, Terms.tsx, Index.tsx
+├── schemas/
+│   └── supplierOnboarding.schema.ts   # Zod schema, client-side source of truth for fields
+└── types/
+    └── supabase.ts          # Supplier / Buyer interfaces (hand-written, not generated)
+
+supabase/
+├── config.toml
+└── functions/
+    ├── explain-fit/index.ts
+    └── validate-supplier/index.ts
 ```
 
-Each module must be **small, readable, and single-responsibility**.
+**No `app/` directory, no FastAPI routers, no SQLAlchemy models exist.** If you see references to them elsewhere (this doc previously did), they describe a plan that was superseded.
 
 ---
 
-## 6. Core Domain Models
+## 6. Where Scoring Actually Lives
 
-### 6.1 Supplier (Kenya)
+Scoring is **client-side TypeScript**, not a backend service:
 
-Represents a grower, exporter, or aggregator.
+* `src/lib/scoring/index.ts` implements the 3-layer architecture from `doc/scoring/kenya-germany-readiness-spec.md`: Hard Gates → Readiness Score → Risk Discounts.
+* `calculateKenyaGermanyReadiness()` runs the full spec when detailed onboarding data is present.
+* `calculateQuickReadiness()` runs a lighter heuristic scoring pass when detailed fields are missing (e.g. a partially-onboarded supplier).
+* `fitEngine.ts` wraps both, and additionally applies **buyer-specific adjustments** (capacity match, product category match) on top of the readiness score — this buyer-fit layer isn't described in the original spec doc at all and should be added there.
+* `validate-supplier` (edge function) re-validates the same fields server-side as a defensive mirror of the client Zod schema — it does not run scoring itself.
 
-**Fields (initial MVP):**
-
-* id
-* company_name
-* contact_name
-* location_county
-* product_category
-* production_capacity_monthly
-* processing_level
-* certifications (array)
-* export_experience (boolean)
-* created_at
-
-**Notes:**
-
-* No pricing
-* No guarantees
-* No logistics data
+**Known inconsistency to resolve:** both `calculateQuickReadiness()` and `calculateReadinessFromFormData()` penalize suppliers for missing "EUDR Compliant" certification / incomplete EUDR documentation. Macadamia and tree nuts are **not** in EUDR's product scope (EUDR covers cattle, cocoa, coffee, palm oil, rubber, soy, wood). Either:
+(a) this is intentional forward-scaffolding for an eventual coffee/EUDR-covered product line, or
+(b) it's scope creep that should be removed from the macadamia scoring path since it penalizes suppliers for something legally irrelevant to their corridor and product.
+This needs an explicit decision — see the note added to `MVP Freeze Document`.
 
 ---
 
-### 6.2 Buyer (Germany)
+## 7. AI Explanation Layer
 
-Represents an importer, processor, or wholesaler.
-
-**Fields:**
-
-* id
-* company_name
-* buyer_type (importer / processor / wholesaler)
-* product_category
-* required_specs (JSON)
-* min_order_quantity
-* frequency (spot / recurring)
-* risk_tolerance (low / medium / high)
-* created_at
+* Lives entirely in the `explain-fit` edge function, not a separate `services/fit_engine.py` as originally spec'd.
+* System prompt matches `doc/AI Explanation Prompt Template` closely (see that doc for the current, corrected version).
+* Adds input sanitization (`sanitizeString()`) against prompt injection — a defensive measure not called out in the original docs, worth keeping and documenting going forward.
+* Enforces a 150-word response cap not present in the original template doc.
 
 ---
 
-### 6.3 FitAnalysis (Computed Intelligence)
+## 8. Feature Flags (Actual)
 
-Represents the result of supplier–buyer alignment.
-
-**Fields:**
-
-* id
-* supplier_id
-* buyer_id
-* fit_score (0–100)
-* readiness_score (0–100)
-* gaps (JSON array of strings)
-* notes (optional)
-* created_at
-
-**Important:**
-
-* FitAnalysis may be recomputed
-* Persistence is optional (can cache results)
+* `src/lib/features.ts` holds the in-memory `FEATURES` object. **Current default: `AI_EXPLANATIONS: true`** — this differs from the original doc, which specified a safe default of `false`.
+* `src/lib/featureFlags.ts` fetches overrides from a Supabase `feature_flags` table (`hydrateFeaturesFromDB()`) — the "later this can be Supabase-driven" note in the original Wiring doc is already implemented, not a future step.
 
 ---
 
-### 6.4 IntroRequest
-
-Represents a request to connect a supplier and buyer.
-
-**Fields:**
-
-* id
-* supplier_id
-* buyer_id
-* status (pending / approved / rejected)
-* created_at
-
-Human-in-the-loop by design.
-
----
-
-## 7. API Endpoints (MVP)
-
-### 7.1 Health
-
-```
-GET /health
-```
-
-Returns:
-
-```json
-{ "status": "ok" }
-```
-
----
-
-### 7.2 Suppliers
-
-```
-POST /suppliers
-GET  /suppliers
-GET  /suppliers/{id}
-```
-
-Purpose:
-
-* Supplier onboarding
-* Data input for fit analysis
-
----
-
-### 7.3 Buyers
-
-```
-POST /buyers
-GET  /buyers
-GET  /buyers/{id}
-```
-
-Purpose:
-
-* Structured buyer intent capture
-
----
-
-### 7.4 Market Fit Analysis (Core Value)
-
-```
-POST /fit/analyze
-```
-
-**Request**
-
-```json
-{
-  "supplier_id": 1,
-  "buyer_id": 2
-}
-```
-
-**Response**
-
-```json
-{
-  "fit_score": 78,
-  "readiness_score": 65,
-  "gaps": [
-    "Moisture content above typical German tolerance",
-    "Missing HACCP certification"
-  ]
-}
-```
-
-This endpoint:
-
-* Calls the AI Fit Engine
-* Returns explainable, human-readable insights
-
----
-
-### 7.5 Introduction Requests
-
-```
-POST /intros/request
-GET  /intros
-```
-
-Purpose:
-
-* Allow controlled introductions
-* No automatic matching or deal execution
-
----
-
-## 8. AI Fit Engine (Critical Design)
-
-### Location
-
-```
-services/fit_engine.py
-```
-
-### Responsibilities
-
-* Translate supplier data into German buyer context
-* Compare against buyer specs
-* Generate:
-
-  * Fit score
-  * Readiness score
-  * Gap explanations
-
-### Constraints
-
-* AI output must be:
-
-  * Explainable
-  * Non-binding
-  * Reviewable
-* No hallucinated certifications or guarantees
-
-### Prompt Design
-
-Prompts must:
-
-* Be corridor-specific (Kenya → Germany)
-* Emphasize risk, gaps, and uncertainty
-* Avoid optimistic language
-
----
-
-## 9. Scoring Logic
-
-Use a hybrid approach:
-
-* Deterministic rules (e.g. missing certifications)
-* AI-generated reasoning for nuance
-
-Scores must be:
-
-* Directional, not absolute
-* Clearly described as guidance
-
----
-
-## 10. Configuration & Environment
-
-### `.env.example`
-
-* DATABASE_URL
-* AI_PROVIDER
-* AI_API_KEY
-* ENV (development / production)
-
-### `config.py`
-
-* Pydantic-based settings
-* Centralized configuration access
-
----
-
-## 11. Monetization Hooks (Design Only)
-
-No billing in MVP.
-
-Design considerations:
-
-* Rate-limit fit analyses per supplier
-* Flag “premium insights” internally
-* Prepare for supplier subscriptions
-
----
-
-## 12. Non-Goals (Explicit)
-
-The backend must not include:
-
-* Payments
-* Pricing logic
-* Logistics tracking
-* Compliance automation
-* Messaging/chat
-* Notifications
-
-These are future layers.
-
----
-
-## 13. Build Order (Recommended)
-
-1. Project skeleton
-2. Database + models
-3. Supplier endpoints
-4. Buyer endpoints
-5. Fit analysis service
-6. Fit endpoint
-7. Intro request flow
-
-Stop. Test. Learn.
-
----
-
-## 14. Definition of Success
-
-The backend is successful if:
-
-* A Kenyan supplier gains clarity on German readiness
-* A German buyer reduces screening time
-* Insights are valuable even without trade execution
-
----
-
-## 15. Final Instruction to Lovable
-
-Build this as:
-
-* Clear
-* Boring
-* Correct
-* Extensible
-
-KARAVA is infrastructure.
-Infrastructure earns trust by restraint.
-
----
+## 9. Gaps Worth Addressing (Not Urgent, Just Documented)
+
+* **No schema-as-code for most tables.** As of the coffee EUDR hard-gate
+  work (see `doc/scoring/coffee-eudr-addendum.md`), one migration exists:
+  `supabase/migrations/20260901055658_add_eudr_hard_gate_columns.sql`.
+  Every other table/column in the live Supabase project was still added
+  via the dashboard directly and has no corresponding migration file —
+  this is the first, not a pattern yet. Someone rebuilding the DB from
+  the repo alone still cannot do so for the rest of the schema.
+* **No auth on edge functions.** Fine for a pre-revenue MVP; becomes a real gap the moment a buyer-side paywall exists (per the buyer-monetization work now planned).
+* **`types/supabase.ts` is hand-maintained**, not generated from the live schema — drift risk over time.

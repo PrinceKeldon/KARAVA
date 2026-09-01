@@ -108,4 +108,10 @@ export interface SupplierScoringData {
   traceability_strength?: 'strong' | 'partial' | 'weak' | null;
   has_logistics_issues?: boolean | null;
   documentation_complete?: boolean | null;
+
+  // EUDR hard gate fields (coffee-only — see doc/scoring/coffee-eudr-addendum.md)
+  eudr_geolocation_provided?: boolean | null;
+  eudr_deforestation_free_confirmed?: boolean | null;
+  eudr_legality_documented?: boolean | null;
+  eudr_due_diligence_ready?: boolean | null;
 }

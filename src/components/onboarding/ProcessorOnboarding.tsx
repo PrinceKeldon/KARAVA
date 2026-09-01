@@ -522,21 +522,28 @@ function ReadinessStep({ form, onNext, onBack }: StepProps) {
         
         <div className="bg-muted/30 rounded-md p-4 border border-border">
           <p className="font-medium text-foreground mb-3 text-sm">EUDR documentation status</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            {eudrApplies
-              ? "Required for coffee exports to the EU — this affects your readiness score."
-              : "Optional for this product category — not currently part of your readiness score."}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {["Complete", "In progress", "Not started", "Unsure"].map((opt) => (
-              <RadioOption
-                key={opt}
-                label={opt}
-                selected={eudrStatus === opt}
-                onChange={() => setValue('eudrStatus', opt)}
-              />
-            ))}
-          </div>
+          {eudrApplies ? (
+            <p className="text-xs text-muted-foreground mb-3">
+              Required for coffee exports to the EU — this affects your readiness score.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mb-3">
+              Optional for this product category — not currently part of your readiness score.
+              (Scaffolding for a planned coffee/EUDR product track.)
+            </p>
+          )}
+          {eudrApplies && (
+            <div className="flex flex-wrap gap-2">
+              {["Complete", "In progress", "Not started", "Unsure"].map((opt) => (
+                <RadioOption
+                  key={opt}
+                  label={opt}
+                  selected={eudrStatus === opt}
+                  onChange={() => setValue('eudrStatus', opt)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {eudrApplies && (
@@ -740,10 +747,28 @@ function AssessmentPreviewStep({ form, assessment, onBack, onSubmit, isLoading }
               <span className="text-muted-foreground">{gap}</span>
             </div>
           ))}
+          {assessment.gaps.some(g => g.includes('capacity') || g.includes('category')) && (
+            <p className="text-xs text-muted-foreground">
+              Note: Buyer-fit adjustments (capacity match, product category alignment) are applied
+              when buyer requirements are supplied. These can adjust the readiness score by −15 or −20 points.
+            </p>
+          )}
         </div>
         <p className="text-xs text-muted-foreground">
           Full assessment with detailed gap analysis available after profile completion.
         </p>
+        {FEATURES.AI_EXPLANATIONS && (
+          <div className="mt-3 p-3 rounded bg-primary/5 text-sm">
+            <span className="font-medium text-primary">AI explanation</span>
+            <span className="text-primary/80">enabled — scoring engine will generate interpretive analysis of your score</span>
+          </div>
+        )}
+        {!FEATURES.AI_EXPLANATIONS && (
+          <div className="mt-3 p-3 rounded bg-muted border border-border text-sm">
+            <span className="text-muted-foreground">AI explanation</span>
+            <span className="text-muted-foreground/80">disabled — scores based on deterministic rules only. Enable per-environment via Supabase feature_flags table.</span>
+          </div>
+        )}
       </div>
       <div className="flex gap-3">
         <Button variant="ghost" onClick={onBack} className="flex-1" disabled={isLoading}>

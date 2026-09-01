@@ -1,10 +1,9 @@
 # Coffee Readiness Track — EUDR Addendum
 
-**Status:** Coffee is now a selectable product category. EUDR is scored,
-conditionally, in the two live/reachable scoring paths (see §3). The full
-4-gate EUDR hard-gate design below (§2) is specified but only partially
-implemented — see §3 for exactly what runs today vs. what's designed for
-later.
+**Status:** Coffee is a selectable product category. EUDR is scored in
+the form-based/quick paths, AND the four EUDR hard gates below are now
+implemented in the detailed-data pipeline (`hardGates.ts`), backed by a
+real migration. See §3 for exactly what changed and how to verify it.
 
 ---
 
@@ -68,28 +67,27 @@ detailed-data scoring pipeline (`calculateKenyaGermanyReadiness` /
 }
 ```
 
-**These gates are NOT yet wired into `hardGates.ts`.** Reasons, so this
-isn't silent scope-cutting:
+**These gates are now implemented in `hardGates.ts`** (`EUDR_HARD_GATES`,
+`getHardGatesForSupplier()`), gated by
+`isEUDRCoveredCategory(supplier.product_category)` — so macadamia and
+other non-coffee suppliers are entirely unaffected, and only evaluated
+when a supplier's category matches. Backing columns were added via
+`supabase/migrations/20260901055658_add_eudr_hard_gate_columns.sql` —
+the first real migration in this repo (see `BACKEND_BUILD` §9 for the
+gap this addresses; that gap remains open for every other table until
+someone does the same for them).
 
-* `hardGates.ts` operates on persisted `Supplier` DB records. None of the
-  four fields above (`eudr_geolocation`, etc.) exist as columns in the
-  live Supabase schema, and — per `BACKEND_BUILD` §9 — there's no
-  `supabase/migrations/` in this repo to add them safely.
-* Wiring these as hard gates today, with no way for any coffee supplier
-  to ever satisfy them, would make every coffee supplier that reaches the
-  detailed-data pipeline permanently `BLOCKED` with no path to fix it —
-  a worse outcome than not scoring EUDR at all.
-* The coarse-grained scoring that IS live today (§3) already captures the
-  directional signal ("has this supplier started/finished EUDR
-  paperwork?") without that failure mode, and matches what the onboarding
-  form can actually collect right now.
-
-**Before implementing these as real hard gates:** add the four
-corresponding columns to the Supplier schema (ideally via a real
-migration, breaking the "schema lives only in the dashboard" pattern),
-add UI fields to collect them during onboarding, then wire them into
-`hardGates.ts` gated by `isEUDRCoveredCategory(supplier.product_category)`
-the same way the coarse scoring is gated today.
+**Consequence to be aware of:** any coffee supplier who reaches the
+detailed-data scoring pipeline (`calculateKenyaGermanyReadiness`) without
+having set all four fields will be `BLOCKED`, same as failing any other
+hard gate. This was a deliberate, conservative default matching "evidence
+over aspiration" — but it means a coffee supplier can go from
+`CONDITIONALLY_READY` to `BLOCKED` purely by having their category read
+as coffee once these fields exist. The onboarding UI (§3) now collects
+these fields directly so this isn't a silent trap, but it's worth
+knowing about if reviewing existing coffee supplier data that predates
+this change — those records will have all four fields `null`/unset and
+will read as `BLOCKED` until updated.
 
 ---
 
@@ -100,30 +98,47 @@ the same way the coarse scoring is gated today.
   array). Not an enum check, because `product_category` / `products` are
   freeform strings (see `BACKEND_BUILD` §9).
 * **`calculateReadinessFromFormData`** (`fitEngine.ts`) — the live
-  onboarding-form scoring path. Now scores the existing `eudrStatus`
-  field (`Not started` / `In progress` / `Unsure` / `Complete`) exactly
-  as before, but only when `isEUDRCoveredCategory(formData.products)` is
-  true. This is the path a new coffee supplier actually experiences today.
+  onboarding-form scoring path. Scores the coarse `eudrStatus` field
+  (`Not started` / `In progress` / `Unsure` / `Complete`), gated by
+  `isEUDRCoveredCategory(formData.products)`.
 * **`calculateQuickReadiness`** (`scoring/index.ts`) — the DB-backed quick
-  path used for suppliers without detailed data. Now checks for an
+  path used for suppliers without detailed data. Checks for an
   `'EUDR Compliant'` tag in `supplier.certifications`, gated the same way,
   by `supplier.product_category`.
+* **`hardGates.ts`** — `EUDR_HARD_GATES` (the four gates from §2),
+  evaluated as real binary hard gates for coffee suppliers going through
+  the detailed-data pipeline (`calculateKenyaGermanyReadiness`). Verified
+  with scripted checks: a macadamia supplier with none of the four EUDR
+  fields set is unaffected; a coffee supplier with none of them set is
+  `BLOCKED` specifically on the four `eudr_*` gate IDs; the same coffee
+  supplier with all four set is not blocked by EUDR (falls through to
+  normal readiness scoring on the remaining criteria).
+* **`supabase/migrations/20260901055658_add_eudr_hard_gate_columns.sql`**
+  — adds `eudr_geolocation_provided`, `eudr_deforestation_free_confirmed`,
+  `eudr_legality_documented`, `eudr_due_diligence_ready` as nullable
+  booleans on `suppliers`. First real migration in this repo.
+* **`src/types/supabase.ts`** and **`src/lib/scoring/types.ts`** — the
+  four fields added to `Supplier` and `SupplierScoringData`.
+* **Onboarding UI** (`ProcessorOnboarding.tsx`, `ReadinessStep`) — when
+  Coffee is among the supplier's selected products, four toggles appear
+  under the existing EUDR status question, with copy explicitly warning
+  that these are hard requirements, not scored criteria. Values are
+  written into the Supabase insert payload on submit.
 * **Product category lists** — "Coffee" added to:
-  `ProcessorOnboarding.tsx` (supplier product selection),
-  `BuyerOnboarding.tsx` (buyer product-interest selection), and
-  `BuyerDiscovery.tsx` (buyer-side filter list).
-* **Onboarding copy** — the EUDR question in `ProcessorOnboarding.tsx`
-  now reads differently depending on whether the supplier has selected
-  Coffee, so suppliers aren't confused about whether it affects their
-  score.
+  `ProcessorOnboarding.tsx`, `BuyerOnboarding.tsx`, and
+  `BuyerDiscovery.tsx`'s filter list.
 
-## 4. What's NOT Implemented
+## 4. What's Still NOT Implemented
 
-* The four-pillar hard-gate design in §2 (geolocation, deforestation-free,
-  legality, DDS) — specified, not built. See §2 for why and what's needed
-  first.
 * Buyer-side EUDR requirement fields (e.g. a buyer stating "I require DDS
   reference on file") — not modeled anywhere yet.
 * Any integration with the EU's actual Information System / TRACES for
   DDS submission or verification — out of scope for KARAVA, which is a
   pre-trade readiness tool, not a compliance filing system.
+* Applying the migration to the live Supabase project. The SQL file
+  exists in the repo; someone with project access still needs to run it
+  (via the Supabase CLI or dashboard SQL editor) before these fields
+  actually persist. Until then, the code paths that read/write them will
+  fail against the live DB or silently no-op depending on Supabase's
+  behavior for unknown columns — test against a real environment before
+  relying on this in production.

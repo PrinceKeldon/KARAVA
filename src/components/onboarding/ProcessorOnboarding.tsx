@@ -381,6 +381,10 @@ function ReadinessStep({ form, onNext, onBack }: StepProps) {
   const hasLotCodingSystem = watch('hasLotCodingSystem');
   const hasFarmMapping = watch('hasFarmMapping');
   const hasRecallProcedure = watch('hasRecallProcedure');
+  const eudrGeolocationProvided = watch('eudrGeolocationProvided');
+  const eudrDeforestationFreeConfirmed = watch('eudrDeforestationFreeConfirmed');
+  const eudrLegalityDocumented = watch('eudrLegalityDocumented');
+  const eudrDueDiligenceReady = watch('eudrDueDiligenceReady');
 
   const toggleCert = (cert: string) => {
     const currentCerts = certifications || [];
@@ -534,6 +538,40 @@ function ReadinessStep({ form, onNext, onBack }: StepProps) {
             ))}
           </div>
         </div>
+
+        {eudrApplies && (
+          <div className="bg-muted/30 rounded-md p-4 border border-border">
+            <p className="font-medium text-foreground mb-1 text-sm">EUDR due diligence detail</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Coffee is an EUDR-covered commodity. These four items are
+              evaluated as hard requirements — missing any of them will
+              block your readiness verdict, regardless of your score
+              elsewhere.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <ToggleOption
+                label="Plot-level geolocation data provided"
+                checked={eudrGeolocationProvided}
+                onChange={() => setValue('eudrGeolocationProvided', !eudrGeolocationProvided)}
+              />
+              <ToggleOption
+                label="Deforestation-free production confirmed"
+                checked={eudrDeforestationFreeConfirmed}
+                onChange={() => setValue('eudrDeforestationFreeConfirmed', !eudrDeforestationFreeConfirmed)}
+              />
+              <ToggleOption
+                label="Legality documentation in place"
+                checked={eudrLegalityDocumented}
+                onChange={() => setValue('eudrLegalityDocumented', !eudrLegalityDocumented)}
+              />
+              <ToggleOption
+                label="Due diligence statement ready"
+                checked={eudrDueDiligenceReady}
+                onChange={() => setValue('eudrDueDiligenceReady', !eudrDueDiligenceReady)}
+              />
+            </div>
+          </div>
+        )}
         
         <div className="bg-muted/30 rounded-md p-4 border border-border">
           <p className="font-medium text-foreground mb-3 text-sm">Traceability to farm level</p>
@@ -773,6 +811,10 @@ export function ProcessorOnboarding({ onClose }: { onClose: () => void }) {
         container_capacity_20ft: data.containerCapacity20ft || undefined,
         certifications: data.certifications.filter(c => c !== 'None'),
         eudr_status: data.eudrStatus || undefined,
+        eudr_geolocation_provided: data.eudrGeolocationProvided,
+        eudr_deforestation_free_confirmed: data.eudrDeforestationFreeConfirmed,
+        eudr_legality_documented: data.eudrLegalityDocumented,
+        eudr_due_diligence_ready: data.eudrDueDiligenceReady,
         traceability: data.traceability || undefined,
         has_export_license: data.hasExportLicense,
         export_license_number: data.exportLicenseNumber || undefined,

@@ -2,11 +2,13 @@
 
 ### (Feature-Flagged · Read-Only · Kenya → Germany)
 
-**File location (recommended):**
+**Actual file location (implementation):**
 
 ```
-docs/AI_EXPLANATION_PROMPT.md
+supabase/functions/explain-fit/index.ts
 ```
+
+(Not `docs/AI_EXPLANATION_PROMPT.md` — that path was never created. This document is the reference spec; the edge function above is the live implementation and currently matches it closely, with two additions noted below.)
 
 ---
 

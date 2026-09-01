@@ -3,6 +3,7 @@
 
 import type { HardGate, HardGateResult, SupplierScoringData } from './types';
 import type { Supplier } from '@/types/supabase';
+import { isEUDRCoveredCategory } from './eudr';
 
 export const HARD_GATES: HardGate[] = [
   {
@@ -43,7 +44,49 @@ export const HARD_GATES: HardGate[] = [
   },
 ];
 
+// EUDR hard gates — only apply to EUDR-covered categories (currently:
+// coffee). See doc/scoring/coffee-eudr-addendum.md §2 for the source
+// spec and doc/scoring/coffee-eudr-addendum.md §3 for what's implemented.
+// Backed by supabase/migrations/20260901055658_add_eudr_hard_gate_columns.sql.
+export const EUDR_HARD_GATES: HardGate[] = [
+  {
+    id: 'eudr_geolocation',
+    label: 'Plot-level geolocation data for all production units',
+    required: true,
+    evidenceRequired: ['geolocation_coordinates_or_polygon'],
+  },
+  {
+    id: 'eudr_deforestation_free',
+    label: 'Confirmation of deforestation-free production (no deforestation after 31 Dec 2020)',
+    required: true,
+    evidenceRequired: ['deforestation_free_declaration', 'supporting_satellite_or_survey_evidence'],
+  },
+  {
+    id: 'eudr_legality',
+    label: 'Legal compliance in country of production (land use rights, environmental protection, labour rights, tax, anti-corruption, trade/customs)',
+    required: true,
+    evidenceRequired: ['legality_documentation'],
+  },
+  {
+    id: 'eudr_due_diligence_statement',
+    label: 'Due diligence statement prepared, ready for submission via the EU Information System',
+    required: true,
+    evidenceRequired: ['dds_draft_or_reference_number'],
+  },
+];
+
 type ExtendedSupplier = Supplier & Partial<SupplierScoringData>;
+
+/**
+ * Get the applicable hard gate list for a supplier — base gates always
+ * apply; EUDR gates apply only when the supplier's product category is
+ * EUDR-covered (currently: coffee).
+ */
+export function getHardGatesForSupplier(supplier: ExtendedSupplier): HardGate[] {
+  return isEUDRCoveredCategory(supplier.product_category)
+    ? [...HARD_GATES, ...EUDR_HARD_GATES]
+    : HARD_GATES;
+}
 
 /**
  * Evaluate all hard gates for a supplier.
@@ -119,6 +162,45 @@ export function evaluateHardGates(supplier: ExtendedSupplier): HardGateResult[] 
       ? undefined 
       : 'EU-compliant labelling not verified',
   });
+
+  // 7-10. EUDR hard gates — coffee only. See getHardGatesForSupplier().
+  if (isEUDRCoveredCategory(supplier.product_category)) {
+    results.push({
+      gateId: 'eudr_geolocation',
+      label: EUDR_HARD_GATES[0].label,
+      passed: Boolean(supplier.eudr_geolocation_provided),
+      reason: supplier.eudr_geolocation_provided
+        ? undefined
+        : 'Plot-level geolocation data not provided (required for coffee under EUDR)',
+    });
+
+    results.push({
+      gateId: 'eudr_deforestation_free',
+      label: EUDR_HARD_GATES[1].label,
+      passed: Boolean(supplier.eudr_deforestation_free_confirmed),
+      reason: supplier.eudr_deforestation_free_confirmed
+        ? undefined
+        : 'Deforestation-free production not confirmed (required for coffee under EUDR)',
+    });
+
+    results.push({
+      gateId: 'eudr_legality',
+      label: EUDR_HARD_GATES[2].label,
+      passed: Boolean(supplier.eudr_legality_documented),
+      reason: supplier.eudr_legality_documented
+        ? undefined
+        : 'Legal compliance in country of production not documented (required for coffee under EUDR)',
+    });
+
+    results.push({
+      gateId: 'eudr_due_diligence_statement',
+      label: EUDR_HARD_GATES[3].label,
+      passed: Boolean(supplier.eudr_due_diligence_ready),
+      reason: supplier.eudr_due_diligence_ready
+        ? undefined
+        : 'Due diligence statement not ready (required for coffee under EUDR)',
+    });
+  }
 
   return results;
 }

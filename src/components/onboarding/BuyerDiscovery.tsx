@@ -7,6 +7,7 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { useRequestIntro } from "@/hooks/useIntroRequests";
 import { useToast } from "@/hooks/use-toast";
 import { calculateFitScore, type FitResult, type ScoreBand } from "@/lib/fitEngine";
+import { FEATURES } from "@/lib/features";
 import type { Supplier } from "@/types/supabase";
 
 interface DisplaySupplier {
@@ -250,6 +251,7 @@ export function BuyerDiscovery({ onClose, buyerId }: { onClose: () => void; buye
   const [showFilters, setShowFilters] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<DisplaySupplier | null>(null);
   const [introRequested, setIntroRequested] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   
   const { data: suppliers, isLoading, error } = useSuppliers();
   const requestIntro = useRequestIntro();
@@ -293,7 +295,15 @@ export function BuyerDiscovery({ onClose, buyerId }: { onClose: () => void; buye
 
   const handleRequestIntro = async () => {
     if (!selectedSupplier) return;
-    
+
+    // Paywall gate — see FEATURES.BUYER_CONTACT_PAYWALL in src/lib/features.ts.
+    // Inactive by default: when off, this is a no-op and behavior is
+    // unchanged from the original free intro-request flow below.
+    if (FEATURES.BUYER_CONTACT_PAYWALL && !showPaywall) {
+      setShowPaywall(true);
+      return;
+    }
+
     try {
       await requestIntro.mutateAsync({
         supplier_id: selectedSupplier.id,
@@ -328,6 +338,36 @@ export function BuyerDiscovery({ onClose, buyerId }: { onClose: () => void; buye
         <Button variant="outline" onClick={onClose}>
           Close
         </Button>
+      </div>
+    );
+  }
+
+  // Paywall step — STUB ONLY. No real payment integration yet. This exists
+  // so the gate point, UI, and activation switch are in place before the
+  // coffee-track / KEPROBA-outreach work informs actual pricing. See
+  // doc/BUYER_MONETIZATION for the design and what's needed to go live.
+  if (showPaywall && selectedSupplier) {
+    return (
+      <div className="w-full max-w-lg text-center py-8">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <Shield className="w-8 h-8 text-primary" />
+        </div>
+        <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+          Unlock Introduction to {selectedSupplier.name}
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">
+          Pricing not yet set. This is a placeholder step — no payment is
+          processed. Flip <code>FEATURES.BUYER_CONTACT_PAYWALL</code> off to
+          restore the free flow.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <Button variant="outline" onClick={() => setShowPaywall(false)}>
+            Back
+          </Button>
+          <Button onClick={handleRequestIntro}>
+            Continue (demo — no charge)
+          </Button>
+        </div>
       </div>
     );
   }

@@ -1,0 +1,70 @@
+# Buyer Monetization — Design & Status
+
+**Status: scaffolded, inactive.** Nothing here charges real money yet. This
+document exists so the design decision and the activation steps are
+recorded, not just implied by code.
+
+---
+
+## 1. Decision
+
+Gate the **contact/introduction step**, not the readiness verdict itself.
+
+Buyers see the full readiness score, breakdown, hard-gate results, and gaps
+for every supplier for free. Paying is required to move from "I trust this
+verdict" to "connect me with this supplier."
+
+**Why this and not gating the score:** the readiness verdict is the actual
+trust product and the thing that differentiates KARAVA from broader,
+less-rigorous directories (see ExportReady.africa / Export Ready Africa in
+market research). Hiding it before a buyer has any reason to trust the
+platform enough to pay would undercut the whole pitch. Charging to act on
+trust already extended is the more natural transaction point in a B2B trade
+context.
+
+Ruled out for now, and why:
+* **Gate full score breakdown** — chicken-and-egg: hides the credibility signal before the buyer has a reason to pay for it.
+* **Gate AI explanation only** — cheap to build (flag infra already exists) but the AI layer is the least essential part of the value prop. Low ceiling.
+* **Usage-based freemium** — doesn't fit a corridor this narrow yet; the supply pool (KEPROBA-cohort-sized) is too small for buyers to hit a volume cap for a long time.
+
+---
+
+## 2. What's Actually Implemented
+
+* `FEATURES.BUYER_CONTACT_PAYWALL` in `src/lib/features.ts` — **default `false`**.
+* `BuyerDiscovery.tsx` — `handleRequestIntro()` checks the flag. When `true`
+  and the paywall step hasn't been shown yet, it short-circuits into a
+  placeholder panel ("Unlock Introduction to {supplier}") instead of
+  immediately writing the intro request. That panel's "Continue" button is a
+  **demo no-op** — it charges nothing and proceeds straight to the existing
+  free flow.
+* Toggling the flag on (via the Supabase `feature_flags` table, same
+  mechanism as `AI_EXPLANATIONS`) is enough to see the gate in place, without
+  any further code changes, for demoing the shape internally.
+
+## 3. What's NOT Implemented (Required Before This Can Go Live)
+
+* **Pricing.** No number has been decided. Needs KEPROBA-cohort /
+  German-buyer conversations first (this was explicitly sequenced *after*
+  docs reconciliation and *before* the coffee track).
+* **A real payment processor.** Nothing is wired to Stripe or any other
+  processor. The "Continue (demo)" button is a placeholder.
+* **`payment_status` on `intro_requests`.** The live schema only has `id,
+  supplier_id, buyer_id, status, created_at` (see `src/types/supabase.ts`).
+  There's no `supabase/migrations/` in this repo (a gap already flagged in
+  `BACKEND_BUILD` §9), so this column doesn't exist anywhere yet. Adding it
+  requires a real migration once schema-as-code exists — don't add it via
+  the Supabase dashboard only, or the drift problem this doc is trying to
+  avoid repeats itself.
+* **Buyer-side auth.** Both edge functions run with `verify_jwt = false`
+  (see `BACKEND_BUILD` §3). A real paywall needs to know reliably who the
+  buyer is; that's an auth decision, not just a payments one.
+
+## 4. Activation Checklist (When Ready)
+
+1. Decide pricing (per-intro fee vs. subscription) from real buyer signal.
+2. Add buyer auth.
+3. Add a `payment_status` migration to `intro_requests`.
+4. Replace the placeholder panel's "Continue" button with a real checkout
+   flow; write `payment_status` on success before calling `requestIntro`.
+5. Flip `BUYER_CONTACT_PAYWALL` to `true` via the `feature_flags` table.
